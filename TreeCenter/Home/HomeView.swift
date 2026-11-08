@@ -18,12 +18,19 @@ struct HomeView: View {
     @State private var selectedTab = 0
 
     var body: some View {
+        NavigationStack {
+            content
+        }
+    }
+
+    private var content: some View {
         VStack(spacing: 0) {
             header
 
             ScrollView {
                 VStack(spacing: 12) {
-                    gymWidget
+                    NavigationLink { GymView() } label: { gymWidget }
+                        .buttonStyle(.plain)
                     HStack(spacing: 12) {
                         foodWidget
                         calendarWidget

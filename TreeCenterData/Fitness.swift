@@ -13,7 +13,9 @@ public final class Exercise {
     public var technique: [String] = []
     public var createdAt: Date = Date()
 
-    @Relationship(deleteRule: .cascade, inverse: \SetEntry.exercise)
+    /// Nullify y no cascade: borrar un ejercicio del catálogo no puede llevarse
+    /// por delante el historial de lo que levantaste con él.
+    @Relationship(deleteRule: .nullify, inverse: \SetEntry.exercise)
     public var sets: [SetEntry] = []
 
     public init(name: String = "", animationName: String? = nil, technique: [String] = []) {

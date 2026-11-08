@@ -89,10 +89,33 @@ public enum TreeCenterSchema {
         guard existing.isEmpty else { return }
 
         // Gimnasio: empuje, tirón y pierna de lunes a viernes.
+        // Las sesiones vienen con ejercicios puestos para que la pantalla no se
+        // abra vacía. Es un punto de partida, no una rutina pensada para nadie:
+        // se edita entera desde la propia app.
         let push = WorkoutTemplate(name: "Empuje", order: 0)
         let pull = WorkoutTemplate(name: "Tirón", order: 1)
         let legs = WorkoutTemplate(name: "Pierna", order: 2)
         [push, pull, legs].forEach(context.insert)
+
+        let starter: [(WorkoutTemplate, [(String, Int, Int)])] = [
+            (push, [("Press banca", 4, 8), ("Press militar", 3, 10),
+                    ("Fondos", 3, 12), ("Elevaciones laterales", 3, 15)]),
+            (pull, [("Dominadas", 4, 8), ("Remo con barra", 4, 10),
+                    ("Curl con barra", 3, 12), ("Face pull", 3, 15)]),
+            (legs, [("Sentadilla", 4, 8), ("Peso muerto rumano", 3, 10),
+                    ("Prensa", 3, 12), ("Gemelos", 4, 15)])
+        ]
+
+        for (template, rows) in starter {
+            for (index, row) in rows.enumerated() {
+                let exercise = Exercise(name: row.0)
+                context.insert(exercise)
+                let planned = PlannedExercise(exercise: exercise, order: index,
+                                              sets: row.1, reps: row.2)
+                context.insert(planned)
+                planned.template = template
+            }
+        }
 
         let plan: [Weekday: WorkoutTemplate?] = [
             .monday: push, .tuesday: pull, .wednesday: legs,

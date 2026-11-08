@@ -141,6 +141,60 @@ struct TCSectionLabel: View {
     }
 }
 
+// MARK: - Cabecera de pantalla
+
+/// La cabecera que repiten todas las pantallas de dentro: flecha, título y lo
+/// que haga falta a la derecha. La barra del sistema va oculta porque el diseño
+/// pide este botón redondo y no el de iOS.
+struct TCScreenHeader<Trailing: View>: View {
+    let title: String
+    var subtitle: String?
+    var back: () -> Void
+    @ViewBuilder var trailing: () -> Trailing
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 10) {
+            Button(action: back) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(TCColor.text)
+                    .frame(width: 32, height: 32)
+                    .overlay(Circle().stroke(TCColor.lineStrong, lineWidth: 1))
+            }
+            .accessibilityLabel("Volver")
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).tcTitle()
+                if let subtitle { Text(subtitle).tcMicro() }
+            }
+
+            Spacer(minLength: 8)
+            trailing()
+        }
+        .padding(.horizontal, TCSpace.gutter)
+        .padding(.top, 8)
+        .padding(.bottom, 16)
+    }
+}
+
+extension TCScreenHeader where Trailing == EmptyView {
+    init(title: String, subtitle: String? = nil, back: @escaping () -> Void) {
+        // Explícito y no con closure final: así no hay forma de que el compilador
+        // resuelva esta misma init y se llame a sí misma.
+        self.init(title: title, subtitle: subtitle, back: back, trailing: { EmptyView() })
+    }
+}
+
+/// El cartel de Bodytone que va arriba a la derecha en el gimnasio.
+struct BodytoneMark: View {
+    var body: some View {
+        Text("BODYTONE")
+            .font(TCFont.font(10, .semibold))
+            .tracking(2)
+            .foregroundStyle(TCColor.textMicro)
+    }
+}
+
 // MARK: - La marca
 
 struct TreeMark: View {
