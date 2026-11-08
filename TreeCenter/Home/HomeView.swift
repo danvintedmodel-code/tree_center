@@ -277,9 +277,6 @@ struct HomeView: View {
         ScrollView(.horizontal) {
             HStack(spacing: 14) {
                 ForEach(sections) { section in
-                    // Armario y Caprichos siguen sin pantalla, así que se quedan
-                    // como botones mudos: un enlace que no lleva a ningún sitio
-                    // es peor que un botón que no hace nada.
                     switch section.go {
                     case .projects:
                         NavigationLink { ProjectsView() } label: { sectionIcon(section) }
@@ -297,7 +294,7 @@ struct HomeView: View {
                         NavigationLink { WishesView() } label: { sectionIcon(section) }
                             .buttonStyle(.plain)
                     case .wardrobe:
-                        Button {} label: { sectionIcon(section) }
+                        NavigationLink { WardrobeView() } label: { sectionIcon(section) }
                             .buttonStyle(.plain)
                     }
                 }
