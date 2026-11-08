@@ -112,11 +112,11 @@ final class SchemaTests: XCTestCase {
 
     @MainActor
     func testUnaEtiquetaNoTieneTopePorMuchoQueSeLeGuarde() {
-        let tag = Wallet(name: "Transporte", kind: .tag, monthlyCap: 100)
+        let tag = WalletSection(name: "Transporte", kind: .tag, monthlyCap: 100)
         XCTAssertNil(tag.effectiveCap, "Una etiqueta solo agrupa; el tope es de las subcarteras")
         XCTAssertFalse(tag.canBeARing)
 
-        let sub = Wallet(name: "Comida", kind: .wallet, monthlyCap: 250)
+        let sub = WalletSection(name: "Comida", kind: .wallet, monthlyCap: 250)
         XCTAssertEqual(sub.effectiveCap, 250)
         XCTAssertTrue(sub.canBeARing)
     }
@@ -126,15 +126,38 @@ final class SchemaTests: XCTestCase {
         let context = try freshContext()
 
         let daily = Wallet(name: "Diario")
-        let food = Wallet(name: "Comida", kind: .wallet, monthlyCap: 250, order: 0)
-        let transport = Wallet(name: "Transporte", kind: .tag, order: 1)
-        [daily, food, transport].forEach(context.insert)
-        food.parent = daily
-        transport.parent = daily
+        let food = WalletSection(name: "Comida", kind: .wallet, monthlyCap: 250, order: 0)
+        let transport = WalletSection(name: "Transporte", kind: .tag, order: 1)
+        context.insert(daily)
+        context.insert(food)
+        context.insert(transport)
+        food.wallet = daily
+        transport.wallet = daily
         try context.save()
 
         XCTAssertEqual(daily.orderedSections.map(\.name), ["Comida", "Transporte"])
-        XCTAssertEqual(food.parent?.name, "Diario")
+        XCTAssertEqual(food.wallet?.name, "Diario")
+    }
+
+    @MainActor
+    func testCambiarDeEtiquetaASubcarteraNoPierdeGastos() throws {
+        let context = try freshContext()
+
+        let daily = Wallet(name: "Diario")
+        let transport = WalletSection(name: "Transporte", kind: .tag)
+        context.insert(daily)
+        context.insert(transport)
+        transport.wallet = daily
+        context.insert(Movement(amount: 12.40, kind: .expense, concept: "Metro",
+                                wallet: daily, section: transport))
+        try context.save()
+
+        transport.kindRaw = WalletKind.wallet.rawValue
+        transport.monthlyCap = 80
+        try context.save()
+
+        XCTAssertEqual(transport.movements.count, 1, "Cambiar de clase no borra lo apuntado")
+        XCTAssertEqual(transport.effectiveCap, 80)
     }
 
     // MARK: - Alimentación

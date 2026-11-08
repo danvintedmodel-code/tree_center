@@ -66,6 +66,7 @@ public final class RoutineDay {
     /// Guardado como Int porque SwiftData ordena y filtra mejor por un entero.
     public var weekdayRaw: Int = 1
     public var template: WorkoutTemplate?
+    public var routine: Routine?
 
     public init(weekday: Weekday = .monday, template: WorkoutTemplate? = nil) {
         self.weekdayRaw = weekday.rawValue
@@ -90,7 +91,7 @@ public final class Routine {
     public var name: String = "Mi rutina"
     public var createdAt: Date = Date()
 
-    @Relationship(deleteRule: .cascade)
+    @Relationship(deleteRule: .cascade, inverse: \RoutineDay.routine)
     public var days: [RoutineDay] = []
 
     public init(name: String = "Mi rutina", days: [RoutineDay] = []) {

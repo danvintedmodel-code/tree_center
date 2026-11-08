@@ -19,7 +19,7 @@ public enum TreeCenterSchema {
         // Armario
         Garment.self, Outfit.self,
         // Finanzas
-        Wallet.self, Movement.self, FinanceSettings.self,
+        Wallet.self, WalletSection.self, Movement.self, FinanceSettings.self,
         // Resto
         ImportantDate.self, Project.self, ProjectTask.self, DecisionNote.self,
         Course.self, Topic.self, StudyNote.self,
