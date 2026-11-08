@@ -23,6 +23,11 @@ jobs:
       - name: Que Xcode ha tocado
         run: xcodebuild -version
 
+      # Queda en el log a proposito: los nombres de esquema de un paquete no son
+      # los que uno supone, y haberlos impresos ahorra un viaje entero.
+      - name: Esquemas del paquete
+        run: xcodebuild -list
+
       - name: Compilar la app para iOS
         run: |
           set -o pipefail
@@ -49,6 +54,6 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild test \
-            -scheme TreeCenterCore \
+            -scheme TreeCenter-Package \
             -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.device }}" \
             CODE_SIGNING_ALLOWED=NO
