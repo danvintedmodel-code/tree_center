@@ -80,9 +80,9 @@ public enum TreeCenterSchema {
             }
 
         // Finanzas
-        let daily = Wallet(name: "Diario", color: .moss, monthlyCap: 500, order: 0)
+        let daily = Wallet(name: "Diario", color: .moss, monthlyCapCents: 50_000, order: 0)
         let savings = Wallet(name: "Ahorro", color: .blue, order: 1)
-        let treats = Wallet(name: "Caprichos", color: .clay, monthlyCap: 150, order: 2)
+        let treats = Wallet(name: "Caprichos", color: .clay, monthlyCapCents: 15_000, order: 2)
         [daily, savings, treats].forEach(context.insert)
         context.insert(FinanceSettings())
 

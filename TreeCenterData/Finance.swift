@@ -8,6 +8,8 @@ import SwiftData
 // hacía caer a SwiftData; el diseño nunca pidió más de un nivel, así que son dos
 // tipos y se acabó el problema.
 //
+// Los importes van en céntimos enteros: ver Money.swift.
+//
 // El saldo es acumulado y no se reinicia nunca; entra, sale y el tope son del mes
 // en curso. Esa diferencia es lo que hace que el saldo sea un saldo.
 //
@@ -19,8 +21,8 @@ import SwiftData
 public final class Wallet {
     public var name: String = ""
     public var colorRaw: String = PaletteColor.moss.rawValue
-    /// Tope de gasto del mes.
-    public var monthlyCap: Decimal?
+    /// Tope de gasto del mes, en céntimos. Nil = sin tope.
+    public var monthlyCapCents: Int?
     public var order: Int = 0
     public var showsAsRing: Bool = true
     public var createdAt: Date = Date()
@@ -39,45 +41,48 @@ public final class Wallet {
     public var incomingTransfers: [Movement] = []
 
     public init(name: String = "", color: PaletteColor = .moss,
-                monthlyCap: Decimal? = nil, order: Int = 0) {
+                monthlyCapCents: Int? = nil, order: Int = 0) {
         self.name = name
         self.colorRaw = color.rawValue
-        self.monthlyCap = monthlyCap
+        self.monthlyCapCents = monthlyCapCents
         self.order = order
         self.createdAt = Date()
     }
 
     public var color: PaletteColor { PaletteColor(rawValue: colorRaw) ?? .moss }
+    public var monthlyCap: Decimal? { monthlyCapCents.map(Cents.decimal) }
     public var orderedSections: [WalletSection] { sections.sorted { $0.order < $1.order } }
 
     // MARK: - Cuentas
 
     /// Acumulado desde siempre: ingresos menos gastos, más lo que entra y sale
     /// por traspasos. No se reinicia al cambiar de mes.
-    public var balance: Decimal {
-        var total: Decimal = 0
+    public var balanceCents: Int {
+        var total = 0
         for movement in movements {
             switch movement.kind {
-            case .income: total += movement.amount
-            case .expense, .transfer: total -= movement.amount
+            case .income: total += movement.amountCents
+            case .expense, .transfer: total -= movement.amountCents
             }
         }
         for movement in incomingTransfers where movement.kind == .transfer {
-            total += movement.amount
+            total += movement.amountCents
         }
         return total
     }
 
-    public func spent(in month: DateInterval) -> Decimal {
+    public var balance: Decimal { Cents.decimal(balanceCents) }
+
+    public func spentCents(in month: DateInterval) -> Int {
         movements
             .filter { $0.kind == .expense && month.contains($0.date) }
-            .reduce(0) { $0 + $1.amount }
+            .reduce(0) { $0 + $1.amountCents }
     }
 
-    public func earned(in month: DateInterval) -> Decimal {
+    public func earnedCents(in month: DateInterval) -> Int {
         movements
             .filter { $0.kind == .income && month.contains($0.date) }
-            .reduce(0) { $0 + $1.amount }
+            .reduce(0) { $0 + $1.amountCents }
     }
 }
 
@@ -87,7 +92,7 @@ public final class Wallet {
 public final class WalletSection {
     public var name: String = ""
     public var kindRaw: String = WalletKind.tag.rawValue
-    public var monthlyCap: Decimal?
+    public var monthlyCapCents: Int?
     public var order: Int = 0
 
     public var wallet: Wallet?
@@ -96,29 +101,30 @@ public final class WalletSection {
     public var movements: [Movement] = []
 
     public init(name: String = "", kind: WalletKind = .tag,
-                monthlyCap: Decimal? = nil, order: Int = 0) {
+                monthlyCapCents: Int? = nil, order: Int = 0) {
         self.name = name
         self.kindRaw = kind.rawValue
-        self.monthlyCap = monthlyCap
+        self.monthlyCapCents = monthlyCapCents
         self.order = order
     }
 
     public var kind: WalletKind { WalletKind(rawValue: kindRaw) ?? .tag }
 
     /// Una etiqueta no tiene tope por mucho que haya un número guardado.
-    public var effectiveCap: Decimal? { kind.canHaveCap ? monthlyCap : nil }
+    public var effectiveCapCents: Int? { kind.canHaveCap ? monthlyCapCents : nil }
+    public var effectiveCap: Decimal? { effectiveCapCents.map(Cents.decimal) }
     public var canBeARing: Bool { kind.canBeARing }
 
-    public func spent(in month: DateInterval) -> Decimal {
+    public func spentCents(in month: DateInterval) -> Int {
         movements
             .filter { $0.kind == .expense && month.contains($0.date) }
-            .reduce(0) { $0 + $1.amount }
+            .reduce(0) { $0 + $1.amountCents }
     }
 }
 
 @Model
 public final class Movement {
-    public var amount: Decimal = 0
+    public var amountCents: Int = 0
     public var kindRaw: String = MovementKind.expense.rawValue
     public var date: Date = Date()
     public var concept: String = ""
@@ -133,11 +139,11 @@ public final class Movement {
     /// Solo en traspaso: a dónde va.
     public var destination: Wallet?
 
-    public init(amount: Decimal = 0, kind: MovementKind = .expense,
+    public init(amountCents: Int = 0, kind: MovementKind = .expense,
                 date: Date = Date(), concept: String = "",
                 wallet: Wallet? = nil, section: WalletSection? = nil,
                 destination: Wallet? = nil) {
-        self.amount = amount
+        self.amountCents = amountCents
         self.kindRaw = kind.rawValue
         self.date = date
         self.concept = concept
@@ -148,12 +154,19 @@ public final class Movement {
     }
 
     public var kind: MovementKind { MovementKind(rawValue: kindRaw) ?? .expense }
+    public var amount: Decimal { Cents.decimal(amountCents) }
 
     /// Con signo, para mostrar. Un traspaso no suma ni resta al total.
-    public var signedAmount: Decimal { amount * kind.sign }
+    public var signedCents: Int {
+        switch kind {
+        case .expense: return -amountCents
+        case .income: return amountCents
+        case .transfer: return 0
+        }
+    }
 
     public var isValid: Bool {
-        guard amount > 0 else { return false }
+        guard amountCents > 0 else { return false }
         if kind == .transfer { return destination != nil && destination !== wallet }
         return wallet != nil
     }

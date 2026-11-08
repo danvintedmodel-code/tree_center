@@ -227,7 +227,8 @@ public final class WishBlock {
 @Model
 public final class WishItem {
     public var name: String = ""
-    public var price: Decimal?
+    /// En céntimos, como todo el dinero de la app. Ver Money.swift.
+    public var priceCents: Int?
     public var link: String = ""
     public var notes: String = ""
     public var createdAt: Date = Date()
@@ -235,12 +236,14 @@ public final class WishItem {
 
     @Attribute(.externalStorage) public var image: Data?
 
-    public init(name: String = "", price: Decimal? = nil, link: String = "") {
+    public init(name: String = "", priceCents: Int? = nil, link: String = "") {
         self.name = name
-        self.price = price
+        self.priceCents = priceCents
         self.link = link
         self.createdAt = Date()
     }
+
+    public var price: Decimal? { priceCents.map(Cents.decimal) }
 }
 
 @Model
@@ -248,20 +251,22 @@ public final class Place {
     public var name: String = ""
     public var country: String = ""
     public var whenNote: String = ""
-    public var budget: Decimal?
+    public var budgetCents: Int?
     public var notes: String = ""
     public var order: Int = 0
 
     @Attribute(.externalStorage) public var image: Data?
 
     public init(name: String = "", country: String = "", whenNote: String = "",
-                budget: Decimal? = nil, order: Int = 0) {
+                budgetCents: Int? = nil, order: Int = 0) {
         self.name = name
         self.country = country
         self.whenNote = whenNote
-        self.budget = budget
+        self.budgetCents = budgetCents
         self.order = order
     }
+
+    public var budget: Decimal? { budgetCents.map(Cents.decimal) }
 }
 
 // MARK: - Home

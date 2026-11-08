@@ -3,9 +3,10 @@ import SwiftData
 import XCTest
 @testable import TreeCenterData
 
-// Un esquema de SwiftData puede compilar perfectamente y reventar al arrancar:
-// una inversa mal emparejada no es un error de tipos, es un error de ejecución.
-// Por eso estas pruebas levantan un almacén de verdad en lugar de mirar el código.
+// Un esquema de SwiftData puede compilar perfectamente y reventar al arrancar o
+// al guardar: una inversa mal emparejada o un tipo que no traga no son errores de
+// tipos, son errores de ejecución. Por eso estas pruebas levantan un almacén de
+// verdad y guardan en él, en vez de limitarse a mirar el código.
 
 final class SchemaTests: XCTestCase {
 
@@ -28,12 +29,22 @@ final class SchemaTests: XCTestCase {
         return try TreeCenterSchema.container(at: url).mainContext
     }
 
-    // MARK: - Que el esquema exista
+    // MARK: - Que el esquema exista y aguante un guardado
 
     @MainActor
     func testElEsquemaArranca() throws {
         XCTAssertNoThrow(try TreeCenterSchema.container(inMemory: true),
                          "Si esto falla, hay una relación mal declarada")
+    }
+
+    @MainActor
+    func testGuardarUnaCarteraNoRevienta() throws {
+        // Esta prueba existe porque un día reventó: un `Decimal?` tumbaba el
+        // runner entero al guardar. Ahora el dinero va en céntimos enteros, y
+        // esta es la red que avisa si alguien vuelve a meter un decimal.
+        let context = try freshContext()
+        context.insert(Wallet(name: "Diario", monthlyCapCents: 50_000))
+        XCTAssertNoThrow(try context.save())
     }
 
     @MainActor
@@ -86,7 +97,16 @@ final class SchemaTests: XCTestCase {
         XCTAssertFalse(Weekday.from(calendarWeekday: 2).canBeRestDay)
     }
 
-    // MARK: - Finanzas
+    // MARK: - Dinero
+
+    @MainActor
+    func testLosCentimosNoArrastranErrores() {
+        XCTAssertEqual(Cents.from(12.40), 1_240)
+        XCTAssertEqual(Cents.from(0.1) + Cents.from(0.2), Cents.from(0.3),
+                       "Esto es justo lo que falla en coma flotante")
+        XCTAssertEqual(Cents.decimal(148_760), Decimal(string: "1487.60"))
+        XCTAssertEqual(Cents.from(Cents.decimal(999_999)), 999_999)
+    }
 
     @MainActor
     func testElTraspasoMueveSaldoPeroNoCuentaComoGasto() throws {
@@ -96,7 +116,7 @@ final class SchemaTests: XCTestCase {
         let context = try freshContext()
 
         print("[datos] insertando carteras")
-        let daily = Wallet(name: "Diario", monthlyCap: 500)
+        let daily = Wallet(name: "Diario", monthlyCapCents: 50_000)
         let savings = Wallet(name: "Ahorro", color: .blue)
         context.insert(daily)
         context.insert(savings)
@@ -105,10 +125,12 @@ final class SchemaTests: XCTestCase {
         try context.save()
 
         print("[datos] insertando movimientos")
-        context.insert(Movement(amount: 1800, kind: .income, concept: "Nómina", wallet: daily))
-        context.insert(Movement(amount: 12.40, kind: .expense, concept: "Metro", wallet: daily))
-        context.insert(Movement(amount: 300, kind: .transfer, concept: "A Ahorro",
-                                wallet: daily, destination: savings))
+        context.insert(Movement(amountCents: 180_000, kind: .income,
+                                concept: "Nómina", wallet: daily))
+        context.insert(Movement(amountCents: 1_240, kind: .expense,
+                                concept: "Metro", wallet: daily))
+        context.insert(Movement(amountCents: 30_000, kind: .transfer,
+                                concept: "A Ahorro", wallet: daily, destination: savings))
 
         print("[datos] guardando movimientos")
         try context.save()
@@ -116,32 +138,33 @@ final class SchemaTests: XCTestCase {
 
         let month = Calendar.current.monthInterval()
 
-        XCTAssertEqual(daily.balance, Decimal(string: "1487.60"))
-        XCTAssertEqual(savings.balance, 300)
+        XCTAssertEqual(daily.balanceCents, 148_760)
+        XCTAssertEqual(savings.balanceCents, 30_000)
 
-        XCTAssertEqual(daily.spent(in: month), Decimal(string: "12.40"),
+        XCTAssertEqual(daily.spentCents(in: month), 1_240,
                        "Un traspaso no es dinero gastado: solo cambia de sitio")
-        XCTAssertEqual(daily.earned(in: month), 1800)
+        XCTAssertEqual(daily.earnedCents(in: month), 180_000)
     }
 
     @MainActor
     func testUnTraspasoSinDestinoNoEsValido() {
-        let orphan = Movement(amount: 50, kind: .transfer, wallet: Wallet(name: "Diario"))
+        let orphan = Movement(amountCents: 5_000, kind: .transfer, wallet: Wallet(name: "Diario"))
         XCTAssertFalse(orphan.isValid)
 
-        let toItself = Wallet(name: "Diario")
-        let circular = Movement(amount: 50, kind: .transfer, wallet: toItself, destination: toItself)
+        let wallet = Wallet(name: "Diario")
+        let circular = Movement(amountCents: 5_000, kind: .transfer,
+                                wallet: wallet, destination: wallet)
         XCTAssertFalse(circular.isValid, "Traspasarse dinero a uno mismo no significa nada")
     }
 
     @MainActor
     func testUnaEtiquetaNoTieneTopePorMuchoQueSeLeGuarde() {
-        let tag = WalletSection(name: "Transporte", kind: .tag, monthlyCap: 100)
-        XCTAssertNil(tag.effectiveCap, "Una etiqueta solo agrupa; el tope es de las subcarteras")
+        let tag = WalletSection(name: "Transporte", kind: .tag, monthlyCapCents: 10_000)
+        XCTAssertNil(tag.effectiveCapCents, "Una etiqueta solo agrupa; el tope es de las subcarteras")
         XCTAssertFalse(tag.canBeARing)
 
-        let sub = WalletSection(name: "Comida", kind: .wallet, monthlyCap: 250)
-        XCTAssertEqual(sub.effectiveCap, 250)
+        let sub = WalletSection(name: "Comida", kind: .wallet, monthlyCapCents: 25_000)
+        XCTAssertEqual(sub.effectiveCapCents, 25_000)
         XCTAssertTrue(sub.canBeARing)
     }
 
@@ -150,7 +173,7 @@ final class SchemaTests: XCTestCase {
         let context = try freshContext()
 
         let daily = Wallet(name: "Diario")
-        let food = WalletSection(name: "Comida", kind: .wallet, monthlyCap: 250, order: 0)
+        let food = WalletSection(name: "Comida", kind: .wallet, monthlyCapCents: 25_000, order: 0)
         let transport = WalletSection(name: "Transporte", kind: .tag, order: 1)
         context.insert(daily)
         context.insert(food)
@@ -172,16 +195,16 @@ final class SchemaTests: XCTestCase {
         context.insert(daily)
         context.insert(transport)
         transport.wallet = daily
-        context.insert(Movement(amount: 12.40, kind: .expense, concept: "Metro",
+        context.insert(Movement(amountCents: 1_240, kind: .expense, concept: "Metro",
                                 wallet: daily, section: transport))
         try context.save()
 
         transport.kindRaw = WalletKind.wallet.rawValue
-        transport.monthlyCap = 80
+        transport.monthlyCapCents = 8_000
         try context.save()
 
         XCTAssertEqual(transport.movements.count, 1, "Cambiar de clase no borra lo apuntado")
-        XCTAssertEqual(transport.effectiveCap, 80)
+        XCTAssertEqual(transport.effectiveCapCents, 8_000)
     }
 
     // MARK: - Alimentación
