@@ -293,7 +293,10 @@ struct HomeView: View {
                     case .finance:
                         NavigationLink { FinanceView() } label: { sectionIcon(section) }
                             .buttonStyle(.plain)
-                    case .wardrobe, .wishes:
+                    case .wishes:
+                        NavigationLink { WishesView() } label: { sectionIcon(section) }
+                            .buttonStyle(.plain)
+                    case .wardrobe:
                         Button {} label: { sectionIcon(section) }
                             .buttonStyle(.plain)
                     }
