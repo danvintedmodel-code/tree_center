@@ -9,6 +9,9 @@ import TreeCenterData
 // cuando esté dibujado; cambiar uno por otro es tocar solo `HomeSection.symbol`.
 
 struct HomeView: View {
+    /// Hace falta aquí solo para Ajustes, que es desde donde se cambia el trazo.
+    let lock: LockController
+
     @Query private var routines: [Routine]
     @Query private var workouts: [Workout]
     @Query private var meals: [MealEntry]
@@ -35,7 +38,8 @@ struct HomeView: View {
                     HStack(spacing: 12) {
                         NavigationLink { FoodShelfView() } label: { foodWidget }
                             .buttonStyle(.plain)
-                        calendarWidget
+                        NavigationLink { CalendarView() } label: { calendarWidget }
+                            .buttonStyle(.plain)
                     }
                     Button("Añadir widget") {}
                         .buttonStyle(TCGhostButtonStyle(dashed: true))
@@ -251,32 +255,45 @@ struct HomeView: View {
     // MARK: - Barra de secciones
 
     // Nombres propios: `Section` y `Tab` ya existen en SwiftUI y taparlos da sustos.
+    private enum SectionGo { case wardrobe, wishes, projects, learning, library, finance }
+
     private struct HomeSection: Identifiable {
         let id = UUID()
         let name: String
         let symbol: String
+        let go: SectionGo
     }
 
     private let sections: [HomeSection] = [
-        .init(name: "Armario", symbol: "hanger"),
-        .init(name: "Caprichos", symbol: "sparkles"),
-        .init(name: "Proyectos", symbol: "flag"),
-        .init(name: "Formación", symbol: "lightbulb"),
-        .init(name: "Biblioteca", symbol: "books.vertical"),
-        .init(name: "Finanzas", symbol: "circle.circle")
+        .init(name: "Armario", symbol: "hanger", go: .wardrobe),
+        .init(name: "Caprichos", symbol: "sparkles", go: .wishes),
+        .init(name: "Proyectos", symbol: "flag", go: .projects),
+        .init(name: "Formación", symbol: "lightbulb", go: .learning),
+        .init(name: "Biblioteca", symbol: "books.vertical", go: .library),
+        .init(name: "Finanzas", symbol: "circle.circle", go: .finance)
     ]
 
     private var sectionsBar: some View {
         ScrollView(.horizontal) {
             HStack(spacing: 14) {
                 ForEach(sections) { section in
-                    // Solo Finanzas tiene pantalla todavía. Las demás quedan
-                    // como botones sin destino a propósito: un enlace que no
-                    // lleva a ningún sitio es peor que un botón que no hace nada.
-                    if section.name == "Finanzas" {
+                    // Armario y Caprichos siguen sin pantalla, así que se quedan
+                    // como botones mudos: un enlace que no lleva a ningún sitio
+                    // es peor que un botón que no hace nada.
+                    switch section.go {
+                    case .projects:
+                        NavigationLink { ProjectsView() } label: { sectionIcon(section) }
+                            .buttonStyle(.plain)
+                    case .learning:
+                        NavigationLink { LearningView() } label: { sectionIcon(section) }
+                            .buttonStyle(.plain)
+                    case .library:
+                        NavigationLink { LibraryView() } label: { sectionIcon(section) }
+                            .buttonStyle(.plain)
+                    case .finance:
                         NavigationLink { FinanceView() } label: { sectionIcon(section) }
                             .buttonStyle(.plain)
-                    } else {
+                    case .wardrobe, .wishes:
                         Button {} label: { sectionIcon(section) }
                             .buttonStyle(.plain)
                     }
@@ -327,17 +344,24 @@ struct HomeView: View {
     private var tabBar: some View {
         HStack(spacing: 4) {
             ForEach(Array(tabs.enumerated()), id: \.offset) { index, tab in
-                Button { tapTab(index) } label: {
-                    VStack(spacing: 6) {
-                        Image(systemName: tab.symbol)
-                            .font(.system(size: 20, weight: .light))
-                        Text(tab.name).font(TCFont.font(10, index == selectedTab ? .medium : .regular))
-                    }
-                    .foregroundStyle(index == selectedTab ? TCColor.moss : TCColor.textMicro)
-                    .frame(maxWidth: .infinity, minHeight: 44)
+                if index == 3 {
+                    NavigationLink { SettingsView(lock: lock) } label: { tabLabel(index, tab) }
+                        .buttonStyle(.plain)
+                } else {
+                    Button { tapTab(index) } label: { tabLabel(index, tab) }
+                        .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         }
+    }
+
+    private func tabLabel(_ index: Int, _ tab: HomeTab) -> some View {
+        VStack(spacing: 6) {
+            Image(systemName: tab.symbol)
+                .font(.system(size: 20, weight: .light))
+            Text(tab.name).font(TCFont.font(10, index == selectedTab ? .medium : .regular))
+        }
+        .foregroundStyle(index == selectedTab ? TCColor.moss : TCColor.textMicro)
+        .frame(maxWidth: .infinity, minHeight: 44)
     }
 }

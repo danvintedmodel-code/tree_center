@@ -33,7 +33,7 @@ public struct RootView: View {
             if lock.phase == .unlocked {
                 VStack(spacing: 0) {
                     if storeIsTemporary { temporaryStoreBanner }
-                    HomeView()
+                    HomeView(lock: lock)
                 }
                 .transition(.opacity)
             } else {

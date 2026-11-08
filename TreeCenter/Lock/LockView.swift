@@ -46,7 +46,7 @@ struct LockView: View {
 
             Spacer(minLength: 16)
 
-            if lock.phase == .locked, BiometricAuth.available != .none {
+            if lock.phase == .locked, BiometricAuth.available != .none, LockController.biometricsEnabled {
                 Button {
                     Task { await lock.tryBiometrics() }
                 } label: {

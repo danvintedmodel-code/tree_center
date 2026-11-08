@@ -99,7 +99,16 @@ public final class LockController {
 
     // MARK: - Face ID
 
+    /// Dónde se guarda si quieres Face ID. En UserDefaults y no en el Keychain
+    /// porque es una preferencia, no un secreto: apagarla no abre nada.
+    public static let biometricsPreferenceKey = "tc.useBiometrics"
+
+    public static var biometricsEnabled: Bool {
+        UserDefaults.standard.object(forKey: biometricsPreferenceKey) as? Bool ?? true
+    }
+
     func tryBiometrics() async {
+        guard Self.biometricsEnabled else { return }
         guard phase == .locked, !isWaitingOutPenalty else { return }
         // La clase es @MainActor, así que al volver del await seguimos en el hilo bueno.
         if await BiometricAuth.authenticate() { unlock() }
