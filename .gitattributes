@@ -1,0 +1,8 @@
+# El repo se escribe en Windows y se compila en macOS. Sin esto, cada máquina
+# guardaría los saltos de línea a su manera y los diffs se llenarían de ruido.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ttf binary
+*.otf binary
