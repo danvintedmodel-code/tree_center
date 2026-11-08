@@ -5,6 +5,7 @@ import PackageDescription
 // Xcode: así la integración continua lo tipa en cada push y los errores llegan solos.
 //
 //   TreeCenterCore  lógica pura, sin UIKit ni SwiftUI. Es la que lleva tests.
+//   TreeCenterData  los modelos de SwiftData y el esquema.
 //   TreeCenterKit   todo lo visual: diseño, Acceso y Home.
 //
 // La app (el `@main`) queda fuera del paquete, en TreeCenter/TreeCenterApp.swift:
@@ -15,6 +16,7 @@ let package = Package(
     platforms: [.iOS(.v17)],
     products: [
         .library(name: "TreeCenterCore", targets: ["TreeCenterCore"]),
+        .library(name: "TreeCenterData", targets: ["TreeCenterData"]),
         .library(name: "TreeCenterKit", targets: ["TreeCenterKit"])
     ],
     targets: [
@@ -23,8 +25,12 @@ let package = Package(
             path: "TreeCenterCore"
         ),
         .target(
+            name: "TreeCenterData",
+            path: "TreeCenterData"
+        ),
+        .target(
             name: "TreeCenterKit",
-            dependencies: ["TreeCenterCore"],
+            dependencies: ["TreeCenterCore", "TreeCenterData"],
             path: "TreeCenter",
             exclude: ["README.md", "TreeCenterApp.swift"]
         ),
@@ -32,6 +38,11 @@ let package = Package(
             name: "TreeCenterCoreTests",
             dependencies: ["TreeCenterCore"],
             path: "Tests/TreeCenterCoreTests"
+        ),
+        .testTarget(
+            name: "TreeCenterDataTests",
+            dependencies: ["TreeCenterData"],
+            path: "Tests/TreeCenterDataTests"
         )
     ]
 )

@@ -1,12 +1,20 @@
+import SwiftData
 import SwiftUI
+import TreeCenterData
 
-// El centro del árbol: widgets arriba, barra de secciones abajo y los cuatro botones
-// pegados al borde.
+// El centro del árbol: widgets arriba, barra de secciones abajo y los cuatro
+// botones pegados al borde. Las cifras salen ya de SwiftData, no del aire.
 //
 // Los iconos son SF Symbols de momento. El set propio de línea de 1,4 px entra
-// cuando estén dibujados; cambiar uno por otro es tocar solo `Section.symbol`.
+// cuando esté dibujado; cambiar uno por otro es tocar solo `HomeSection.symbol`.
 
 struct HomeView: View {
+    @Query private var routines: [Routine]
+    @Query private var workouts: [Workout]
+    @Query private var meals: [MealEntry]
+    @Query private var goals: [NutritionGoal]
+    @Query(sort: \ImportantDate.date) private var importantDates: [ImportantDate]
+
     @State private var selectedTab = 0
 
     var body: some View {
@@ -17,8 +25,7 @@ struct HomeView: View {
                 VStack(spacing: 12) {
                     gymWidget
                     HStack(spacing: 12) {
-                        mediumWidget(label: "COMIDA", value: "1 840",
-                                     caption: "de 2 700 kcal", progress: 0.68)
+                        foodWidget
                         calendarWidget
                     }
                     Button("Añadir widget") {}
@@ -38,6 +45,44 @@ struct HomeView: View {
                 .padding(.horizontal, TCSpace.gutter)
         }
         .background(TCColor.bg)
+    }
+
+    // MARK: - Lo que dicen los datos
+
+    private var routine: Routine? { routines.first }
+
+    private var todayPlan: RoutineDay? { routine?.day(.today) }
+
+    private var trainingDays: Int {
+        routine?.days.filter { !$0.isRestDay }.count ?? 0
+    }
+
+    private var week: DateInterval {
+        Calendar.current.dateInterval(of: .weekOfYear, for: .now)
+            ?? DateInterval(start: .now, duration: 0)
+    }
+
+    private var workoutsThisWeek: [Workout] {
+        workouts.filter { $0.finished && week.contains($0.date) }
+    }
+
+    private var weekdaysTrained: Set<Int> {
+        Set(workoutsThisWeek.map {
+            Weekday.from(calendarWeekday: Calendar.current.component(.weekday, from: $0.date)).rawValue
+        })
+    }
+
+    private var sessionsDone: Int { workoutsThisWeek.count }
+
+    private var todayKcal: Int {
+        meals.filter { Calendar.current.isDateInToday($0.date) }.reduce(0) { $0 + $1.kcal }
+    }
+
+    private var goalKcal: Int { goals.first?.dailyKcal ?? 2700 }
+
+    private var nextDate: ImportantDate? {
+        let startOfToday = Calendar.current.startOfDay(for: .now)
+        return importantDates.first { $0.date >= startOfToday }
     }
 
     // MARK: - Cabecera
@@ -77,35 +122,27 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 16) {
                 ZStack {
-                    TCRing(value: 0.6)
-                    Text("3/5").tcNumber(17)
+                    TCRing(value: trainingDays == 0 ? 0 : Double(sessionsDone) / Double(trainingDays))
+                    Text("\(sessionsDone)/\(trainingDays)").tcNumber(17)
                 }
                 .frame(width: 76, height: 76)
 
                 VStack(alignment: .leading, spacing: 5) {
                     Text("GIMNASIO").tcLabel()
-                    Text("Empuje · semana 3").tcSection()
-                    Text("Hoy toca pecho y hombro").tcBody()
+                    Text(todayPlan?.template?.name ?? "Descanso").tcSection()
+                    Text(gymSubtitle).tcBody()
                 }
                 Spacer(minLength: 0)
             }
 
             HStack(spacing: 6) {
-                ForEach(Array(weekDays.enumerated()), id: \.offset) { _, day in
+                ForEach(Weekday.allCases) { day in
                     VStack(spacing: 7) {
                         Text(day.letter)
                             .font(TCFont.font(11))
-                            .foregroundStyle(day.restDay ? TCColor.textFaint : TCColor.textSoft)
-                        Group {
-                            if day.restDay {
-                                Capsule().fill(TCColor.track).frame(width: 7, height: 1.5)
-                            } else {
-                                Circle()
-                                    .fill(day.done ? TCColor.moss : TCColor.track)
-                                    .frame(width: 7, height: 7)
-                            }
-                        }
-                        .frame(height: 7)
+                            .foregroundStyle(isRest(day) ? TCColor.textFaint : TCColor.textSoft)
+                        dayMark(for: day)
+                            .frame(height: 7)
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -114,25 +151,33 @@ struct HomeView: View {
         .tcCard(padding: 18)
     }
 
-    private struct DayDot { let letter: String; let done: Bool; let restDay: Bool }
-
-    private var weekDays: [DayDot] {
-        [.init(letter: "L", done: true, restDay: false),
-         .init(letter: "M", done: true, restDay: false),
-         .init(letter: "X", done: true, restDay: false),
-         .init(letter: "J", done: false, restDay: false),
-         .init(letter: "V", done: false, restDay: false),
-         .init(letter: "S", done: false, restDay: true),
-         .init(letter: "D", done: false, restDay: true)]
+    private var gymSubtitle: String {
+        guard trainingDays > 0 else { return "Monta tu rutina para empezar" }
+        if todayPlan?.isRestDay ?? true { return "Hoy descansas" }
+        return "\(sessionsDone) de \(trainingDays) sesiones esta semana"
     }
 
-    private func mediumWidget(label: String, value: String,
-                              caption: String, progress: Double) -> some View {
+    private func isRest(_ day: Weekday) -> Bool {
+        routine?.day(day)?.isRestDay ?? true
+    }
+
+    @ViewBuilder
+    private func dayMark(for day: Weekday) -> some View {
+        if isRest(day) {
+            Capsule().fill(TCColor.track).frame(width: 7, height: 1.5)
+        } else {
+            Circle()
+                .fill(weekdaysTrained.contains(day.rawValue) ? TCColor.moss : TCColor.track)
+                .frame(width: 7, height: 7)
+        }
+    }
+
+    private var foodWidget: some View {
         VStack(alignment: .leading, spacing: 9) {
-            Text(label).tcLabel()
-            Text(value).tcNumber(22)
-            Text(caption).tcMicro()
-            TCProgressBar(value: progress, height: 4)
+            Text("COMIDA").tcLabel()
+            Text(todayKcal.formatted(.number.grouping(.automatic))).tcNumber(22)
+            Text("de \(goalKcal.formatted(.number.grouping(.automatic))) kcal").tcMicro()
+            TCProgressBar(value: goalKcal == 0 ? 0 : Double(todayKcal) / Double(goalKcal), height: 4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .tcCard()
@@ -141,15 +186,53 @@ struct HomeView: View {
     private var calendarWidget: some View {
         VStack(alignment: .leading, spacing: 9) {
             Text("CALENDARIO").tcLabel()
-            Text("12 nov").tcNumber(22)
-            Text("Renovar dominio").tcMicro()
-            HStack(spacing: 6) {
-                Circle().fill(TCColor.sand).frame(width: 7, height: 7)
-                Text("en 3 días").tcMicro()
+            if let next = nextDate {
+                Text(shortDate(next.date)).tcNumber(22)
+                Text(next.title).tcMicro().lineLimit(1)
+                HStack(spacing: 6) {
+                    Circle().fill(color(for: next.color)).frame(width: 7, height: 7)
+                    Text(daysAway(next.date)).tcMicro()
+                }
+            } else {
+                Text("—").tcNumber(22)
+                Text("Sin fechas cerca").tcMicro()
+                Text("Añade la primera").tcMicro()
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .tcCard()
+    }
+
+    private func shortDate(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "es_ES")
+        f.dateFormat = "d MMM"
+        return f.string(from: date)
+    }
+
+    private func daysAway(_ date: Date) -> String {
+        let days = Calendar.current.dateComponents(
+            [.day],
+            from: Calendar.current.startOfDay(for: .now),
+            to: Calendar.current.startOfDay(for: date)
+        ).day ?? 0
+
+        switch days {
+        case 0: return "hoy"
+        case 1: return "mañana"
+        default: return "en \(days) días"
+        }
+    }
+
+    private func color(for palette: PaletteColor) -> Color {
+        switch palette {
+        case .moss: return TCColor.moss
+        case .blue: return TCColor.blue
+        case .sand: return TCColor.sand
+        case .clay: return TCColor.clay
+        case .lilac: return TCColor.lilac
+        case .neutral: return TCColor.textSoft
+        }
     }
 
     // MARK: - Barra de secciones
