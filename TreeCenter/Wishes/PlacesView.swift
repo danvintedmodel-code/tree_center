@@ -145,7 +145,10 @@ private struct PlaceCard: View {
     private var footnote: String {
         let parts = [
             place.whenNote.isEmpty ? nil : place.whenNote,
-            place.budgetCents.map(Cents.formatted)
+            // Con closure y no `map(Cents.formatted)`: al pasar la función por
+            // referencia, su segundo parámetro con valor por defecto deja de
+            // serlo y la firma ya no encaja.
+            place.budgetCents.map { Cents.formatted($0) }
         ].compactMap { $0 }
         return parts.isEmpty ? "sin fecha ni presupuesto" : parts.joined(separator: " · ")
     }
