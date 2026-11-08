@@ -16,6 +16,7 @@ struct HomeView: View {
     @Query(sort: \ImportantDate.date) private var importantDates: [ImportantDate]
 
     @State private var selectedTab = 0
+    @State private var addingMovement = false
 
     var body: some View {
         NavigationStack {
@@ -53,6 +54,10 @@ struct HomeView: View {
                 .padding(.horizontal, TCSpace.gutter)
         }
         .background(TCColor.bg)
+        .sheet(isPresented: $addingMovement) {
+            MovementEditorView()
+                .presentationDetents([.large])
+        }
     }
 
     // MARK: - Lo que dicen los datos
@@ -265,19 +270,16 @@ struct HomeView: View {
         ScrollView(.horizontal) {
             HStack(spacing: 14) {
                 ForEach(sections) { section in
-                    Button {} label: {
-                        VStack(spacing: 8) {
-                            Image(systemName: section.symbol)
-                                .font(.system(size: 20, weight: .light))
-                                .frame(height: 23)
-                                .foregroundStyle(TCColor.text)
-                            Text(section.name)
-                                .font(TCFont.font(10))
-                                .foregroundStyle(TCColor.textSoft)
-                        }
-                        .frame(width: 48)
+                    // Solo Finanzas tiene pantalla todavía. Las demás quedan
+                    // como botones sin destino a propósito: un enlace que no
+                    // lleva a ningún sitio es peor que un botón que no hace nada.
+                    if section.name == "Finanzas" {
+                        NavigationLink { FinanceView() } label: { sectionIcon(section) }
+                            .buttonStyle(.plain)
+                    } else {
+                        Button {} label: { sectionIcon(section) }
+                            .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, 16)
@@ -303,10 +305,29 @@ struct HomeView: View {
         .init(name: "Ajustes", symbol: "slider.horizontal.3")
     ]
 
+    private func sectionIcon(_ section: HomeSection) -> some View {
+        VStack(spacing: 8) {
+            Image(systemName: section.symbol)
+                .font(.system(size: 20, weight: .light))
+                .frame(height: 23)
+                .foregroundStyle(TCColor.text)
+            Text(section.name)
+                .font(TCFont.font(10))
+                .foregroundStyle(TCColor.textSoft)
+        }
+        .frame(width: 48)
+    }
+
+    /// Añadir abre la hoja del movimiento desde cualquier sitio. Es el atajo que
+    /// hace creíble lo de apuntar un gasto en tres toques.
+    private func tapTab(_ index: Int) {
+        if index == 2 { addingMovement = true } else { selectedTab = index }
+    }
+
     private var tabBar: some View {
         HStack(spacing: 4) {
             ForEach(Array(tabs.enumerated()), id: \.offset) { index, tab in
-                Button { selectedTab = index } label: {
+                Button { tapTab(index) } label: {
                     VStack(spacing: 6) {
                         Image(systemName: tab.symbol)
                             .font(.system(size: 20, weight: .light))
