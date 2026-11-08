@@ -32,7 +32,8 @@ struct HomeView: View {
                     NavigationLink { GymView() } label: { gymWidget }
                         .buttonStyle(.plain)
                     HStack(spacing: 12) {
-                        foodWidget
+                        NavigationLink { FoodShelfView() } label: { foodWidget }
+                            .buttonStyle(.plain)
                         calendarWidget
                     }
                     Button("Añadir widget") {}
