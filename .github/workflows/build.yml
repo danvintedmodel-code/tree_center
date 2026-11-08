@@ -1,7 +1,7 @@
 name: Compilar
 
 # Compila Tree Center en un Mac de GitHub en cada push, para no depender de estar
-# sentado delante del Mac. Si algo no compila, sale aquí con el archivo y la línea.
+# sentado delante del Mac. Si algo no compila, sale aqui con el archivo y la linea.
 
 on:
   push:
@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Qué Xcode ha tocado
+      - name: Que Xcode ha tocado
         run: xcodebuild -version
 
       - name: Compilar la app para iOS
@@ -31,31 +31,21 @@ jobs:
             -destination 'generic/platform=iOS' \
             CODE_SIGNING_ALLOWED=NO
 
-      # El nombre del simulador cambia con cada imagen de GitHub, así que se busca
+      # El nombre del simulador cambia con cada imagen de GitHub, asi que se busca
       # uno que exista en vez de dejarlo escrito a mano y que falle dentro de un mes.
       - name: Elegir simulador
         id: sim
         run: |
-          DEVICE=$(xcrun simctl list devices available --json | python3 -c '
-import json, sys
-devices = json.load(sys.stdin)["devices"]
-for runtime in sorted(devices, reverse=True):
-    if "iOS" not in runtime:
-        continue
-    for device in devices[runtime]:
-        if device["name"].startswith("iPhone"):
-            print(device["name"])
-            sys.exit(0)
-sys.exit(1)
-')
+          DEVICE=$(xcrun simctl list devices available | grep -m1 -o 'iPhone [^(]*' | sed 's/[[:space:]]*$//' || true)
           if [ -z "$DEVICE" ]; then
-            echo "No hay ningún simulador de iPhone en esta máquina."
+            echo "No hay ningun simulador de iPhone en esta maquina:"
+            xcrun simctl list devices available
             exit 1
           fi
           echo "Simulador: $DEVICE"
           echo "device=$DEVICE" >> "$GITHUB_OUTPUT"
 
-      - name: Probar la lógica del trazo
+      - name: Probar la logica del trazo
         run: |
           set -o pipefail
           xcodebuild test \
