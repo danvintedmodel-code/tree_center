@@ -12,7 +12,14 @@ final class SchemaTests: XCTestCase {
 
     private var storeURLs: [URL] = []
 
+    /// Hay que guardarse los contenedores. Un `ModelContext` no mantiene vivo a
+    /// su `ModelContainer`: si el contenedor es una variable local, se libera al
+    /// salir de la función y el primer `insert` tumba el proceso entero, sin
+    /// excepción ni mensaje. Costó cinco vueltas de CI averiguarlo.
+    private var containers: [ModelContainer] = []
+
     override func tearDown() {
+        containers = []
         for url in storeURLs { try? FileManager.default.removeItem(at: url) }
         storeURLs = []
         super.tearDown()
@@ -26,7 +33,9 @@ final class SchemaTests: XCTestCase {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("tree-center-\(UUID().uuidString).store")
         storeURLs.append(url)
-        return try TreeCenterSchema.container(at: url).mainContext
+        let container = try TreeCenterSchema.container(at: url)
+        containers.append(container)
+        return container.mainContext
     }
 
     // MARK: - Que el esquema exista y aguante un guardado

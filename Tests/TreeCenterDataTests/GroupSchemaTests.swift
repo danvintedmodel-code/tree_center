@@ -17,7 +17,12 @@ final class GroupSchemaTests: XCTestCase {
 
     private var storeURLs: [URL] = []
 
+    /// Igual que en SchemaTests: el contenedor hay que retenerlo. Un contexto
+    /// suelto cuyo contenedor ya se liberó se lleva por delante el proceso.
+    private var containers: [ModelContainer] = []
+
     override func tearDown() {
+        containers = []
         for url in storeURLs { try? FileManager.default.removeItem(at: url) }
         storeURLs = []
         super.tearDown()
@@ -30,9 +35,10 @@ final class GroupSchemaTests: XCTestCase {
             .appendingPathComponent("tc-\(label)-\(UUID().uuidString).store")
         storeURLs.append(url)
         print("[grupo] \(label): abriendo")
-        let context = try TreeCenterSchema.container(models: models, at: url).mainContext
+        let container = try TreeCenterSchema.container(models: models, at: url)
+        containers.append(container)
         print("[grupo] \(label): abierto")
-        return context
+        return container.mainContext
     }
 
     @MainActor
