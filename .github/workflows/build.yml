@@ -1,0 +1,64 @@
+name: Compilar
+
+# Compila Tree Center en un Mac de GitHub en cada push, para no depender de estar
+# sentado delante del Mac. Si algo no compila, sale aquí con el archivo y la línea.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ios:
+    name: iOS
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Qué Xcode ha tocado
+        run: xcodebuild -version
+
+      - name: Compilar la app para iOS
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -scheme TreeCenterKit \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO
+
+      # El nombre del simulador cambia con cada imagen de GitHub, así que se busca
+      # uno que exista en vez de dejarlo escrito a mano y que falle dentro de un mes.
+      - name: Elegir simulador
+        id: sim
+        run: |
+          DEVICE=$(xcrun simctl list devices available --json | python3 -c '
+import json, sys
+devices = json.load(sys.stdin)["devices"]
+for runtime in sorted(devices, reverse=True):
+    if "iOS" not in runtime:
+        continue
+    for device in devices[runtime]:
+        if device["name"].startswith("iPhone"):
+            print(device["name"])
+            sys.exit(0)
+sys.exit(1)
+')
+          if [ -z "$DEVICE" ]; then
+            echo "No hay ningún simulador de iPhone en esta máquina."
+            exit 1
+          fi
+          echo "Simulador: $DEVICE"
+          echo "device=$DEVICE" >> "$GITHUB_OUTPUT"
+
+      - name: Probar la lógica del trazo
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -scheme TreeCenterCore \
+            -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.device }}" \
+            CODE_SIGNING_ALLOWED=NO

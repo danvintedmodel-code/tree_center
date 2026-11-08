@@ -1,0 +1,1381 @@
+<title>Moldes Tree Center</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap">
+<style>
+/* Layout: indice de pantallas a la izquierda, molde de iPhone al centro, notas de taller a la derecha; una columna por debajo de 1000px */
+:root{
+  --paper:#f1f0ea;
+  --paper-2:#e7e6de;
+  --card:#fbfaf6;
+  --ink:#1b231e;
+  --ink-2:#5c665f;
+  --ink-3:#8b938c;
+  --rule:#c8cac1;
+  --grid:rgba(27,35,30,.055);
+  --moss:#3d6b4e;
+  --clay:#a0553a;
+  --screen:#fcfbf8;
+  --wire:#b9bcb2;
+  --wire-fill:rgba(27,35,30,.035);
+  --shadow:0 1px 0 rgba(27,35,30,.06), 0 18px 40px -24px rgba(27,35,30,.35);
+  --display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#141715; --paper-2:#1b1f1c; --card:#1f241f; --ink:#e8e9e3; --ink-2:#a3aba4;
+    --ink-3:#7b837c; --rule:#3a403a; --grid:rgba(232,233,227,.045); --moss:#7eb48d; --clay:#d2886a;
+    --screen:#191d1a; --wire:#4c534c; --wire-fill:rgba(232,233,227,.03);
+    --shadow:0 1px 0 rgba(0,0,0,.4), 0 18px 40px -22px rgba(0,0,0,.8);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#141715; --paper-2:#1b1f1c; --card:#1f241f; --ink:#e8e9e3; --ink-2:#a3aba4;
+  --ink-3:#7b837c; --rule:#3a403a; --grid:rgba(232,233,227,.045); --moss:#7eb48d; --clay:#d2886a;
+  --screen:#191d1a; --wire:#4c534c; --wire-fill:rgba(232,233,227,.03);
+  --shadow:0 1px 0 rgba(0,0,0,.4), 0 18px 40px -22px rgba(0,0,0,.8);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px;
+  color:var(--ink);
+  font-family:var(--body);
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{
+  max-width:1360px;margin:0 auto;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:28px 56px;
+}
+h1,h2,h3,h4{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+
+/* ── cabecera ─────────────────────────────── */
+.top{display:flex;flex-wrap:wrap;gap:18px 28px;align-items:flex-end;justify-content:space-between;border-bottom:1px solid var(--rule);padding-bottom:18px}
+.brand{display:flex;gap:12px;align-items:center;min-width:0}
+.brand svg{flex:none}
+.brand h1{font-size:clamp(20px,4vw,27px);font-weight:700;line-height:1.1}
+.brand .sub{font-family:var(--mono);font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.1em;margin-top:3px}
+.meta{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);display:flex;flex-direction:column;gap:3px;text-align:right}
+.meta b{color:var(--ink);font-weight:500}
+
+/* ── rejilla principal ────────────────────── */
+.cols{display:grid;grid-template-columns:208px minmax(0,1fr) 300px;gap:30px;margin-top:26px;align-items:start}
+@media (max-width:1060px){.cols{grid-template-columns:1fr;gap:26px}}
+
+/* ── indice ───────────────────────────────── */
+.idx{position:sticky;top:env(safe-area-inset-top,0px);display:flex;flex-direction:column;gap:16px;padding-top:4px}
+@media (max-width:1060px){.idx{position:static;flex-direction:row;overflow-x:auto;gap:22px;padding-bottom:6px;border-bottom:1px solid var(--rule)}}
+.idx-group{display:flex;flex-direction:column;gap:5px;min-width:max-content}
+.idx-group>span{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:var(--ink-3);padding-left:2px}
+.idx button{
+  all:unset;cursor:pointer;display:flex;gap:9px;align-items:baseline;
+  font-family:var(--body);font-size:13.5px;color:var(--ink-2);
+  padding:3px 7px 3px 5px;border-radius:5px;border-left:2px solid transparent;
+}
+.idx button:hover{color:var(--ink);background:var(--paper-2)}
+.idx button .n{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);width:1.4em;flex:none}
+.idx button[aria-current="true"]{color:var(--ink);font-weight:500;border-left-color:var(--moss);background:var(--paper-2)}
+.idx button[aria-current="true"] .n{color:var(--moss)}
+.idx button:focus-visible{outline:2px solid var(--moss);outline-offset:2px}
+
+/* ── escenario del molde ──────────────────── */
+.stage{display:flex;flex-direction:column;align-items:center;gap:16px}
+.stage-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;width:100%}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:7px;overflow:hidden;background:var(--card)}
+.seg button{all:unset;cursor:pointer;font-family:var(--mono);font-size:11px;padding:6px 10px;color:var(--ink-2);border-right:1px solid var(--rule)}
+.seg button:last-child{border-right:0}
+.seg button:hover{background:var(--paper-2);color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--moss);color:var(--paper);font-weight:500}
+.seg button:focus-visible{outline:2px solid var(--moss);outline-offset:-2px}
+
+/* iPhone */
+.device{--dw:390;--dh:844;--dr:48;width:min(calc(var(--dw)*1px + 22px),100%)}
+.bezel{
+  width:100%;aspect-ratio:calc(var(--dw) + 22) / calc(var(--dh) + 22);
+  border-radius:calc(var(--dr)*1px + 11px);
+  background:var(--card);border:1px solid var(--rule);
+  box-shadow:var(--shadow);padding:11px;position:relative;
+}
+.bezel::after{content:"";position:absolute;inset:5px;border-radius:calc(var(--dr)*1px + 6px);border:1px dashed var(--rule);opacity:.5;pointer-events:none}
+.screen{
+  position:relative;height:100%;border-radius:calc(var(--dr)*1px);overflow:hidden;
+  background:var(--screen);border:1px solid var(--rule);
+  display:flex;flex-direction:column;
+}
+.statusbar{
+  flex:none;display:flex;justify-content:space-between;align-items:center;
+  height:7.5%;padding:0 10% 0 9%;font-family:var(--display);font-size:12px;font-weight:600;
+  position:relative;z-index:3;color:var(--ink)
+}
+.statusbar .ic{display:flex;gap:4px;align-items:center;opacity:.75}
+.statusbar .ic i{display:block;width:4px;background:currentColor;border-radius:1px}
+.statusbar .ic i:nth-child(1){height:5px}.statusbar .ic i:nth-child(2){height:7px}.statusbar .ic i:nth-child(3){height:9px}
+.statusbar .bat{width:17px;height:9px;border:1.2px solid currentColor;border-radius:2.5px;position:relative}
+.statusbar .bat::after{content:"";position:absolute;inset:1.5px;right:5px;background:currentColor;border-radius:1px}
+.cut{position:absolute;top:2.1%;left:50%;transform:translateX(-50%);background:var(--ink);z-index:4}
+.device.notch .cut{width:40%;height:4.1%;border-radius:0 0 18px 18px;top:0}
+.device.island .cut{width:31%;height:3.9%;border-radius:999px}
+.homebar{flex:none;height:3.4%;display:flex;align-items:center;justify-content:center}
+.homebar::before{content:"";width:35%;height:4px;border-radius:3px;background:var(--ink);opacity:.5}
+.viewport{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 14px 6px}
+.spec{font-family:var(--mono);font-size:11px;color:var(--ink-2);display:flex;flex-wrap:wrap;gap:4px 14px;justify-content:center}
+.spec b{color:var(--ink);font-weight:500}
+
+/* ── lenguaje de boceto ───────────────────── */
+.sc{display:none;flex-direction:column;gap:10px;padding-top:4px;font-size:12px}
+.sc.on{display:flex}
+.sc-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:2px 0 4px}
+.sc-head h3{font-size:19px;font-weight:700}
+.sc-head .date{font-family:var(--mono);font-size:10px;color:var(--ink-3)}
+.lbl{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.11em;color:var(--ink-3)}
+.b{border:1px solid var(--wire);border-radius:8px;background:var(--wire-fill);padding:8px 9px;display:flex;flex-direction:column;gap:5px}
+.b.d{border-style:dashed}
+.ph{
+  border:1px dashed var(--wire);border-radius:8px;display:flex;align-items:center;justify-content:center;
+  text-align:center;font-family:var(--mono);font-size:9.5px;color:var(--ink-3);padding:6px;line-height:1.35;
+  background-image:repeating-linear-gradient(45deg,var(--wire-fill) 0 6px,transparent 6px 12px);
+}
+.r{display:flex;gap:8px}
+.r.ac{align-items:center}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.t{font-size:12.5px;font-weight:500;line-height:1.3}
+.s{font-size:10.5px;color:var(--ink-2);line-height:1.35}
+.xs{font-size:9.5px;color:var(--ink-3);font-family:var(--mono)}
+.btn{border:1px solid var(--ink);border-radius:8px;padding:8px;text-align:center;font-size:12px;font-weight:500}
+.btn.fill{background:var(--ink);color:var(--screen);border-color:var(--ink)}
+.btn.ghost{border-color:var(--wire);color:var(--ink-2)}
+.chip{border:1px solid var(--wire);border-radius:999px;padding:4px 9px;font-size:10.5px;color:var(--ink-2);white-space:nowrap}
+.chip.on{border-color:var(--moss);color:var(--moss);font-weight:500}
+.scroll{display:flex;gap:7px;overflow-x:auto;padding-bottom:3px;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+.bar{height:5px;border-radius:3px;background:var(--wire-fill);border:1px solid var(--wire);overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--moss)}
+.tb{flex:none;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;border-top:1px solid var(--wire);padding:7px 2px 2px;margin-top:4px}
+.tb>div{display:flex;flex-direction:column;align-items:center;gap:3px;font-family:var(--mono);font-size:8.5px;color:var(--ink-3)}
+.tb>div>span{width:16px;height:16px;border:1.2px solid var(--wire);border-radius:4px}
+.tb>div.on{color:var(--moss)}
+.tb>div.on>span{border-color:var(--moss);background:var(--moss);opacity:.25}
+.mk{
+  display:inline-flex;align-items:center;justify-content:center;flex:none;
+  width:15px;height:15px;border-radius:4px;background:var(--moss);color:var(--paper);
+  font-family:var(--mono);font-size:9.5px;font-style:normal;font-weight:500;line-height:1;
+}
+.sc .mk{vertical-align:middle}
+.hr{height:1px;background:var(--wire);opacity:.7;margin:2px 0}
+
+/* mapa */
+.map{width:100%;background:var(--card);border:1px solid var(--rule);border-radius:12px;padding:14px;box-shadow:var(--shadow)}
+.map svg{width:100%;height:auto;display:block}
+
+/* ── notas ────────────────────────────────── */
+.notes{position:sticky;top:env(safe-area-inset-top,0px);display:flex;flex-direction:column;gap:14px;padding-top:4px}
+@media (max-width:1060px){.notes{position:static}}
+.notes h2{font-size:16px;font-weight:600}
+.notes .kicker{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.13em;color:var(--moss)}
+.notes p.intro{font-size:13px;color:var(--ink-2);margin:0}
+.nlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:11px}
+.nlist li{display:grid;grid-template-columns:15px 1fr;gap:9px;align-items:start}
+.nlist .t{font-size:12.5px}
+.nlist .s{font-size:12px;color:var(--ink-2);margin-top:1px}
+.panel{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:12px 13px;display:flex;flex-direction:column;gap:7px}
+.panel .lbl{color:var(--moss)}
+.panel code{font-family:var(--mono);font-size:11.5px;color:var(--ink);background:var(--paper-2);padding:1px 4px;border-radius:3px}
+.panel p{margin:0;font-size:12px;color:var(--ink-2);line-height:1.5}
+.panel.warn{border-color:var(--clay)}
+.panel.warn .lbl{color:var(--clay)}
+footer{margin-top:44px;padding-top:16px;border-top:1px solid var(--rule);font-family:var(--mono);font-size:11px;color:var(--ink-3);display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:space-between}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true" fill="none" stroke="var(--moss)" stroke-width="1.5" stroke-linecap="round">
+        <path d="M17 31V13"/><path d="M17 20l-7-5"/><path d="M17 24l7-5"/>
+        <circle cx="17" cy="9" r="4.2"/><circle cx="8.5" cy="13.5" r="2.6"/><circle cx="25.5" cy="17.5" r="2.6"/>
+      </svg>
+      <div>
+        <h1>Tree Center</h1>
+        <div class="sub">Bocetos · fase 1 de 2</div>
+      </div>
+    </div>
+    <div class="meta">
+      <span><b>Destino:</b> SwiftUI nativo, iOS 17+</span>
+      <span><b>Molde base:</b> iPhone 13 Pro · 390 × 844 pt</span>
+      <span>21 pantallas · 8 nov 2026</span>
+    </div>
+  </header>
+
+  <div class="cols">
+    <!-- ÍNDICE -->
+    <nav class="idx" id="idx" aria-label="Índice de pantallas"></nav>
+
+    <!-- MOLDE -->
+    <div class="stage">
+      <div class="stage-bar">
+        <div class="seg" id="devsel" role="group" aria-label="Tamaño de pantalla"></div>
+      </div>
+
+      <div class="device notch" id="device">
+        <div class="bezel">
+          <div class="cut"></div>
+          <div class="screen">
+            <div class="statusbar"><span>9:41</span>
+              <span class="ic"><i></i><i></i><i></i><span class="bat"></span></span>
+            </div>
+            <div class="viewport" id="viewport">
+
+<!-- ░░ 01 ACCESO ░░ -->
+<section class="sc" id="sc-acceso">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding-top:28px">
+    <svg width="32" height="32" viewBox="0 0 34 34" fill="none" stroke="var(--ink-2)" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+      <path d="M17 31V13"/><path d="M17 20l-7-5"/><path d="M17 24l7-5"/>
+      <circle cx="17" cy="9" r="4.2"/><circle cx="8.5" cy="13.5" r="2.6"/><circle cx="25.5" cy="17.5" r="2.6"/>
+    </svg>
+    <div style="font-family:var(--display);font-weight:700;letter-spacing:.22em;font-size:13px">TREECENTER</div>
+    <div class="s" style="text-align:center">Dibuja tu trazo</div>
+  </div>
+  <div class="r ac" style="justify-content:center;gap:6px;padding-top:8px"><i class="mk">1</i><span class="lbl">Lienzo de patrón</span></div>
+  <div class="ph" style="aspect-ratio:1;border-radius:26px;border-width:1.5px">Área táctil 280 × 280 pt<br>esquinas 32 pt<br><br>el trazo del dedo<br>NO se dibuja en pantalla</div>
+  <div class="r ac" style="justify-content:center;gap:6px"><i class="mk">2</i><span class="xs">3 intentos, luego espera de 30 s</span></div>
+  <div class="hr"></div>
+  <div class="r ac" style="gap:7px"><i class="mk">3</i><div class="btn" style="flex:1">Usar Face ID</div></div>
+  <div class="s" style="text-align:center">Entrar con el trazo guardado</div>
+  <div class="xs" style="text-align:center;padding-bottom:8px">Sin red. Todo vive en el iPhone.</div>
+</section>
+
+<!-- ░░ 02 HOME ░░ -->
+<section class="sc" id="sc-home">
+  <div class="sc-head"><div><h3>Tree Center</h3><div class="date">lunes 9 de noviembre</div></div><div class="ph" style="width:30px;height:30px;border-radius:999px">tú</div></div>
+
+  <div class="r ac" style="gap:6px"><i class="mk">1</i><span class="lbl">Widgets · los montas tú</span></div>
+
+  <div class="b" style="border-radius:16px">
+    <div class="r ac" style="justify-content:space-between"><span class="xs">GIMNASIO</span><span class="xs">grande · 2 × 2</span></div>
+    <div class="r ac" style="gap:11px">
+      <div class="ph" style="width:64px;height:64px;border-radius:999px;flex:none;font-size:8px">anillo<br>de semana</div>
+      <div style="min-width:0;flex:1;display:flex;flex-direction:column;gap:4px">
+        <span class="t">Empuje · semana 3</span>
+        <span class="xs">3 de 5 sesiones hechas</span>
+        <div class="bar"><i style="width:60%"></i></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center;padding-top:3px">
+      <span class="xs" style="color:var(--moss)">L</span><span class="xs" style="color:var(--moss)">M</span><span class="xs" style="color:var(--moss)">X</span><span class="xs">J</span><span class="xs">V</span><span class="xs" style="opacity:.4">S</span><span class="xs" style="opacity:.4">D</span>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="b" style="border-radius:16px"><span class="xs">ALIMENTACIÓN</span><span class="t">1 840 kcal</span><div class="bar"><i style="width:68%"></i></div><span class="xs">mediano · 2 × 1</span></div>
+    <div class="b" style="border-radius:16px"><span class="xs">CALENDARIO</span><span class="t">12 nov</span><span class="s">Renovar dominio</span><span class="xs">mediano · 2 × 1</span></div>
+  </div>
+
+  <div class="btn ghost" style="border-style:dashed">+ añadir widget</div>
+
+  <div class="r ac" style="gap:6px;padding-top:4px"><i class="mk">2</i><span class="lbl">Barra de secciones</span></div>
+  <div class="b" style="border-radius:20px;padding:11px 9px">
+    <div class="scroll" style="gap:10px">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:54px;flex:none"><div class="ph" style="width:34px;height:34px;border-radius:11px;font-size:7px">dib</div><span class="xs" style="font-size:8px">Armario</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:54px;flex:none"><div class="ph" style="width:34px;height:34px;border-radius:11px;font-size:7px">dib</div><span class="xs" style="font-size:8px">Caprichos</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:54px;flex:none"><div class="ph" style="width:34px;height:34px;border-radius:11px;font-size:7px">dib</div><span class="xs" style="font-size:8px">Proyectos</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:54px;flex:none"><div class="ph" style="width:34px;height:34px;border-radius:11px;font-size:7px">dib</div><span class="xs" style="font-size:8px">Formación</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:54px;flex:none"><div class="ph" style="width:34px;height:34px;border-radius:11px;font-size:7px">dib</div><span class="xs" style="font-size:8px">Biblioteca</span></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:54px;flex:none"><div class="ph" style="width:34px;height:34px;border-radius:11px;font-size:7px">dib</div><span class="xs" style="font-size:8px">Finanzas</span></div>
+    </div>
+  </div>
+
+  <div style="flex:1;min-height:18px"></div>
+
+  <div class="r ac" style="gap:6px"><i class="mk">3</i><span class="xs">los 4 botones, pegados abajo del todo</span></div>
+  <div class="tb" style="margin-top:0">
+    <div class="on"><span></span>Inicio</div><div><span></span>Buscar</div><div><span></span>Añadir</div><div><span></span>Ajustes</div>
+  </div>
+</section>
+
+<!-- ░░ 03 WIDGETS ░░ -->
+<section class="sc" id="sc-widgets">
+  <div class="sc-head"><div><span class="xs">‹ Inicio</span><h3>Widgets</h3></div><span class="xs">listo</span></div>
+  <div class="r ac" style="gap:6px"><i class="mk">1</i><span class="lbl">En tu inicio</span></div>
+  <div class="b">
+    <div class="r ac" style="justify-content:space-between"><span class="s">Gimnasio · anillo</span><span class="xs">2×2 · ⇅ · ✕</span></div>
+    <div class="hr"></div>
+    <div class="r ac" style="justify-content:space-between"><span class="s">Alimentación · macros</span><span class="xs">2×1 · ⇅ · ✕</span></div>
+    <div class="hr"></div>
+    <div class="r ac" style="justify-content:space-between"><span class="s">Calendario · próxima</span><span class="xs">2×1 · ⇅ · ✕</span></div>
+  </div>
+  <div class="r ac" style="gap:6px"><i class="mk">2</i><span class="lbl">Diseños para Gimnasio</span></div>
+  <div class="g3">
+    <div class="ph" style="aspect-ratio:1;border-radius:12px;border-color:var(--moss);color:var(--moss)">anillo</div>
+    <div class="ph" style="aspect-ratio:1;border-radius:12px">semana<br>en barras</div>
+    <div class="ph" style="aspect-ratio:1;border-radius:12px">cifra<br>grande</div>
+  </div>
+  <div class="xs" style="text-align:center">‹ 3 de 6 diseños ›</div>
+  <div class="r ac" style="gap:6px"><i class="mk">3</i><span class="lbl">Tamaño</span></div>
+  <div class="scroll"><span class="chip">1 × 1</span><span class="chip">2 × 1</span><span class="chip on">2 × 2</span></div>
+  <div class="r ac" style="gap:6px"><i class="mk">4</i><span class="lbl">Sin widget, en la barra</span></div>
+  <div class="b d"><span class="s">Armario, Caprichos, Emprendimientos, Formación y Biblioteca. Cualquiera puede subir a widget, y cualquier widget puede bajar a la barra.</span></div>
+  <div style="height:8px"></div>
+</section>
+
+<!-- ░░ 04 GIMNASIO ░░ -->
+<section class="sc" id="sc-gimnasio">
+  <div class="sc-head"><div><span class="xs">‹ Inicio</span><h3>Gimnasio</h3></div><span class="xs" style="letter-spacing:.16em">BODYTONE</span></div>
+
+  <div class="r ac" style="gap:6px"><i class="mk">1</i><span class="lbl">Tu semana</span></div>
+  <div class="b" style="border-radius:14px;padding:10px 8px">
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center">
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:center"><span class="xs">L</span><div style="width:100%;aspect-ratio:.72;border-radius:7px;border:1.5px solid var(--moss);background:var(--wire-fill)"></div></div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:center"><span class="xs">M</span><div style="width:100%;aspect-ratio:.72;border-radius:7px;border:1px solid var(--wire)"></div></div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:center"><span class="xs">X</span><div style="width:100%;aspect-ratio:.72;border-radius:7px;border:1px solid var(--wire)"></div></div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:center"><span class="xs">J</span><div style="width:100%;aspect-ratio:.72;border-radius:7px;border:1px solid var(--wire)"></div></div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:center"><span class="xs">V</span><div style="width:100%;aspect-ratio:.72;border-radius:7px;border:1px solid var(--wire)"></div></div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:center"><span class="xs" style="opacity:.45">S</span><div style="width:100%;aspect-ratio:.72;border-radius:7px;border:1px solid var(--wire);background:var(--ink);opacity:.14"></div></div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:center"><span class="xs" style="opacity:.45">D</span><div style="width:100%;aspect-ratio:.72;border-radius:7px;border:1px solid var(--wire);background:var(--ink);opacity:.14"></div></div>
+    </div>
+    <div class="xs" style="text-align:center;padding-top:6px">5 de entreno · sábado y domingo en descanso</div>
+  </div>
+
+  <div class="r ac" style="gap:6px"><i class="mk">2</i><span class="lbl">Hoy · empuje</span></div>
+  <div class="b">
+    <div class="r ac" style="gap:8px"><div class="ph" style="width:36px;height:36px;flex:none;border-radius:8px;font-size:7px">anim</div><div style="flex:1;min-width:0"><div class="t">Press banca</div><div class="xs">4 × 8 · 60 kg</div></div><span class="xs">›</span></div>
+    <div class="hr"></div>
+    <div class="r ac" style="gap:8px"><div class="ph" style="width:36px;height:36px;flex:none;border-radius:8px;font-size:7px">anim</div><div style="flex:1;min-width:0"><div class="t">Press militar</div><div class="xs">3 × 10 · 32 kg</div></div><span class="xs">›</span></div>
+    <div class="hr"></div>
+    <div class="r ac" style="gap:8px"><div class="ph" style="width:36px;height:36px;flex:none;border-radius:8px;font-size:7px">anim</div><div style="flex:1;min-width:0"><div class="t">Fondos</div><div class="xs">3 × 12 · peso corporal</div></div><span class="xs">›</span></div>
+    <div class="hr"></div>
+    <div class="r ac" style="gap:8px"><div class="ph" style="width:36px;height:36px;flex:none;border-radius:8px;font-size:7px">anim</div><div style="flex:1;min-width:0"><div class="t">Elevaciones laterales</div><div class="xs">3 × 15 · 8 kg</div></div><span class="xs">›</span></div>
+  </div>
+  <div class="btn fill">Empezar entreno</div>
+
+  <div class="r ac" style="gap:6px"><i class="mk">3</i><span class="lbl">Progresión</span></div>
+  <div class="b" style="border-radius:14px">
+    <div class="scroll"><span class="chip on">Peso máx.</span><span class="chip">Volumen</span><span class="chip">Reps</span></div>
+    <div class="ph" style="height:84px">Press banca · 12 semanas<br>kg de la mejor serie, semana a semana</div>
+    <div class="r ac" style="justify-content:space-between"><span class="xs">55 → 62,5 kg en 12 semanas</span><span class="xs">cambiar ejercicio ›</span></div>
+  </div>
+
+  <div class="r" style="gap:7px"><div class="btn ghost" style="flex:1">Editar rutina</div><div class="btn ghost" style="flex:1">Medidas</div></div>
+  <div style="height:8px"></div>
+</section>
+
+<!-- ░░ 05 CREAR RUTINA ░░ -->
+<section class="sc" id="sc-rutina">
+  <div class="sc-head"><div><span class="xs">‹ Gimnasio</span><h3>Rutina</h3></div><span class="xs">guardar</span></div>
+
+  <div class="r ac" style="gap:6px"><i class="mk">1</i><span class="lbl">Días · toca para quitar o poner</span></div>
+  <div class="b" style="border-radius:14px;padding:10px 8px">
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center">
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:center"><div style="width:100%;aspect-ratio:.8;border-radius:8px;border:1.5px solid var(--moss);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;color:var(--moss)">L</div><span class="xs" style="font-size:7px">fijo</span></div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:center"><div style="width:100%;aspect-ratio:.8;border-radius:8px;border:1.5px solid var(--moss);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;color:var(--moss)">M</div><span class="xs" style="font-size:7px">fijo</span></div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:center"><div style="width:100%;aspect-ratio:.8;border-radius:8px;border:1.5px solid var(--moss);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;color:var(--moss)">X</div><span class="xs" style="font-size:7px">fijo</span></div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:center"><div style="width:100%;aspect-ratio:.8;border-radius:8px;border:1.5px solid var(--moss);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;color:var(--moss)">J</div><span class="xs" style="font-size:7px">fijo</span></div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:center"><div style="width:100%;aspect-ratio:.8;border-radius:8px;border:1.5px solid var(--moss);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;color:var(--moss)">V</div><span class="xs" style="font-size:7px">fijo</span></div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:center"><div style="width:100%;aspect-ratio:.8;border-radius:8px;border:1px solid var(--wire);background:var(--ink);opacity:.16"></div><span class="xs" style="font-size:7px">libre</span></div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:center"><div style="width:100%;aspect-ratio:.8;border-radius:8px;border:1px solid var(--wire);background:var(--ink);opacity:.16"></div><span class="xs" style="font-size:7px">libre</span></div>
+    </div>
+  </div>
+  <div class="b d" style="border-color:var(--clay)"><span class="s" style="color:var(--clay)">Solo sábado y domingo se pueden quitar, y como mucho los dos. De lunes a viernes no se tocan.</span></div>
+
+  <div class="r ac" style="gap:6px"><i class="mk">2</i><span class="lbl">Qué toca cada día</span></div>
+  <div class="b">
+    <div class="r ac" style="justify-content:space-between"><span class="s">Lunes</span><span class="xs">Empuje ›</span></div>
+    <div class="hr"></div>
+    <div class="r ac" style="justify-content:space-between"><span class="s">Martes</span><span class="xs">Tirón ›</span></div>
+    <div class="hr"></div>
+    <div class="r ac" style="justify-content:space-between"><span class="s">Miércoles</span><span class="xs">Pierna ›</span></div>
+    <div class="hr"></div>
+    <div class="r ac" style="justify-content:space-between"><span class="s">Jueves</span><span class="xs">Empuje ›</span></div>
+    <div class="hr"></div>
+    <div class="r ac" style="justify-content:space-between"><span class="s">Viernes</span><span class="xs">Tirón ›</span></div>
+    <div class="hr"></div>
+    <div class="r ac" style="justify-content:space-between"><span class="s" style="opacity:.45">Sábado</span><span class="xs" style="opacity:.45">descanso</span></div>
+    <div class="r ac" style="justify-content:space-between"><span class="s" style="opacity:.45">Domingo</span><span class="xs" style="opacity:.45">descanso</span></div>
+  </div>
+
+  <div class="r ac" style="gap:6px"><i class="mk">3</i><span class="lbl">Lunes · empuje</span></div>
+  <div class="b">
+    <div class="r ac" style="gap:8px"><div class="ph" style="width:30px;height:30px;flex:none;border-radius:7px;font-size:7px">anim</div><span class="s" style="flex:1">Press banca</span><span class="xs">4 × 8</span></div>
+    <div class="r ac" style="gap:8px"><div class="ph" style="width:30px;height:30px;flex:none;border-radius:7px;font-size:7px">anim</div><span class="s" style="flex:1">Press militar</span><span class="xs">3 × 10</span></div>
+    <div class="hr"></div>
+    <div class="xs">+ añadir ejercicio</div>
+  </div>
+  <div style="height:8px"></div>
+</section>
+
+<!-- ░░ 06 EJERCICIO ░░ -->
+<section class="sc" id="sc-ejercicio">
+  <div class="sc-head"><div><span class="xs">‹ Hoy</span><h3 style="font-size:17px">Press banca</h3></div><span class="xs" style="letter-spacing:.16em">BODYTONE</span></div>
+
+  <div class="r ac" style="gap:6px"><i class="mk">1</i><span class="lbl">Cómo se hace</span></div>
+  <div class="ph" style="aspect-ratio:4/3;border-radius:12px">Personita en dibujo haciendo el ejercicio<br>bucle continuo, 2 s por repetición<br><br>trazo plano, mismo estilo en los 40 ejercicios</div>
+  <div class="scroll" style="justify-content:center"><span class="chip">lento</span><span class="chip on">normal</span><span class="chip">lateral</span><span class="chip">frontal</span></div>
+
+  <div class="r ac" style="gap:6px"><i class="mk">2</i><span class="lbl">Series de hoy</span></div>
+  <div class="b">
+    <div class="r ac" style="gap:7px"><span class="xs" style="width:14px">1</span><span class="s" style="flex:1">60 kg × 8</span><span class="chip on" style="padding:2px 8px">hecha</span></div>
+    <div class="hr"></div>
+    <div class="r ac" style="gap:7px"><span class="xs" style="width:14px">2</span><span class="s" style="flex:1">60 kg × 8</span><span class="chip on" style="padding:2px 8px">hecha</span></div>
+    <div class="hr"></div>
+    <div class="r ac" style="gap:7px"><span class="xs" style="width:14px">3</span><span class="s" style="flex:1;color:var(--ink);font-weight:500">60 kg × __</span><span class="chip" style="padding:2px 8px">ahora</span></div>
+    <div class="hr"></div>
+    <div class="r ac" style="gap:7px"><span class="xs" style="width:14px">4</span><span class="s" style="flex:1;opacity:.5">60 kg × 8</span><span class="xs">—</span></div>
+  </div>
+  <div class="b" style="border-color:var(--moss)"><div class="r ac" style="justify-content:space-between"><span class="s">Descanso</span><span class="t" style="font-family:var(--mono)">1:34</span></div><div class="bar"><i style="width:22%"></i></div></div>
+
+  <div class="r ac" style="gap:6px"><i class="mk">3</i><span class="lbl">Técnica</span></div>
+  <div class="b d">
+    <span class="s">1 · Escápulas atrás y pecho alto.</span>
+    <span class="s">2 · Barra a la línea del pezón, codos a 45°.</span>
+    <span class="s">3 · Pies clavados, sin despegar la cadera.</span>
+  </div>
+
+  <div class="r ac" style="gap:6px"><i class="mk">4</i><span class="lbl">Tu marca</span></div>
+  <div class="g3">
+    <div class="b"><span class="xs">Máximo</span><span class="t">62,5 kg</span></div>
+    <div class="b"><span class="xs">Última</span><span class="t">60 kg</span></div>
+    <div class="b"><span class="xs">Veces</span><span class="t">34</span></div>
+  </div>
+  <div style="height:8px"></div>
+</section>
+
+<!-- ░░ 04 ALIMENTACIÓN ░░ -->
+<section class="sc" id="sc-alimentacion">
+  <div class="sc-head"><div><span class="xs">‹ Inicio</span><h3>Alimentación</h3></div><span class="xs">+ libro</span></div>
+  <div class="r ac" style="gap:6px"><i class="mk">1</i><span class="lbl">Estantería · desliza en horizontal</span></div>
+  <div style="display:flex;align-items:center;gap:8px;justify-content:center;padding:6px 0 2px">
+    <div class="ph" style="width:20%;aspect-ratio:.68;border-radius:3px 7px 7px 3px;transform:perspective(600px) rotateY(26deg) scale(.86);opacity:.6">Básicos</div>
+    <div class="ph" style="width:46%;aspect-ratio:.68;border-radius:3px 10px 10px 3px;border-width:1.5px;color:var(--ink);font-size:11px;box-shadow:var(--shadow)">
+      <span><b>Recetas</b><br><span class="xs">lomo del libro + tapa<br>28 fichas</span></span>
+    </div>
+    <div class="ph" style="width:20%;aspect-ratio:.68;border-radius:3px 7px 7px 3px;transform:perspective(600px) rotateY(-26deg) scale(.86);opacity:.6">Suple</div>
+  </div>
+  <div class="r ac" style="justify-content:center;gap:6px"><i class="mk">2</i><span class="xs">‹ · ● ○ ○ ○ · ›</span></div>
+  <div class="hr" style="opacity:.35"></div>
+  <div class="s" style="text-align:center">Recetas</div>
+  <div class="xs" style="text-align:center">28 fichas · última: ayer</div>
+  <div class="btn fill">Abrir libro</div>
+  <div class="r ac" style="gap:6px;padding-top:6px"><i class="mk">3</i><span class="lbl">Atajos</span></div>
+  <div class="g2"><div class="btn ghost">Foto de comida</div><div class="btn ghost">Buscar alimento</div></div>
+  <div style="height:8px"></div>
+</section>
+
+<!-- ░░ 05 LIBRO ░░ -->
+<section class="sc" id="sc-libro">
+  <div class="sc-head"><div><span class="xs">‹ Estantería</span><h3 style="font-size:17px">Recetas</h3></div><span class="xs">editar</span></div>
+  <div class="r ac" style="gap:6px"><i class="mk">1</i><span class="lbl">Doble página abierta</span></div>
+  <div class="b d" style="padding:0;border-radius:4px 9px 9px 4px;overflow:hidden">
+    <div class="r" style="gap:0">
+      <div style="width:38%;padding:9px 7px;border-right:1px dashed var(--wire);display:flex;flex-direction:column;gap:6px">
+        <span class="lbl">Capítulos</span>
+        <span class="s" style="color:var(--moss);font-weight:500">Desayunos</span>
+        <span class="s">Comidas</span><span class="s">Cenas</span><span class="s">Batidos</span><span class="s">Fuera de casa</span>
+        <div class="hr"></div><span class="xs">+ capítulo</span>
+      </div>
+      <div style="flex:1;padding:9px 8px;display:flex;flex-direction:column;gap:7px;min-width:0">
+        <span class="lbl">Desayunos · 6</span>
+        <div class="r ac" style="gap:7px"><div class="ph" style="width:34px;height:34px;flex:none">png</div><div style="min-width:0"><div class="t">Tortilla de avena</div><div class="xs">412 kcal · 34 P</div></div></div>
+        <div class="r ac" style="gap:7px"><div class="ph" style="width:34px;height:34px;flex:none">png</div><div style="min-width:0"><div class="t">Yogur y frutos</div><div class="xs">290 kcal · 22 P</div></div></div>
+        <div class="r ac" style="gap:7px"><div class="ph" style="width:34px;height:34px;flex:none">png</div><div style="min-width:0"><div class="t">Tostadas aguacate</div><div class="xs">350 kcal · 11 P</div></div></div>
+        <div class="hr"></div><span class="xs">+ ficha</span>
+      </div>
+    </div>
+  </div>
+  <div class="r ac" style="justify-content:center;gap:6px"><i class="mk">2</i><span class="xs">arrastra el borde para pasar página</span></div>
+  <div class="r ac" style="gap:6px"><i class="mk">3</i><span class="lbl">Pie del libro</span></div>
+  <div class="r" style="gap:7px"><div class="btn ghost" style="flex:1">Cámara</div><div class="btn ghost" style="flex:1">Adjuntar PNG</div></div>
+  <div style="height:8px"></div>
+</section>
+
+<!-- ░░ 06 FICHA ░░ -->
+<section class="sc" id="sc-ficha">
+  <div class="sc-head"><div><span class="xs">‹ Desayunos</span><h3 style="font-size:17px">Tortilla de avena</h3></div></div>
+  <div class="r ac" style="gap:6px"><i class="mk">1</i><span class="lbl">Imagen de la ficha</span></div>
+  <div class="ph" style="aspect-ratio:4/3;border-radius:10px">PNG con fondo recortado<br>o foto de cámara<br><br>recorte automático del plato</div>
+  <div class="r" style="gap:7px"><div class="btn ghost" style="flex:1">Cámara</div><div class="btn ghost" style="flex:1">Galería</div></div>
+  <div class="r ac" style="gap:6px"><i class="mk">2</i><span class="lbl">Macros</span></div>
+  <div class="g4">
+    <div class="b" style="padding:6px 5px"><span class="xs">kcal</span><span class="t">412</span></div>
+    <div class="b" style="padding:6px 5px"><span class="xs">prot</span><span class="t">34 g</span></div>
+    <div class="b" style="padding:6px 5px"><span class="xs">hidr</span><span class="t">38 g</span></div>
+    <div class="b" style="padding:6px 5px"><span class="xs">gras</span><span class="t">12 g</span></div>
+  </div>
+  <div class="r ac" style="gap:6px"><i class="mk">3</i><span class="lbl">Ingredientes</span></div>
+  <div class="b">
+    <div class="r ac" style="justify-content:space-between"><span class="s">Avena</span><span class="xs">60 g</span></div>
+    <div class="r ac" style="justify-content:space-between"><span class="s">Huevo</span><span class="xs">2 ud</span></div>
+    <div class="r ac" style="justify-content:space-between"><span class="s">Clara</span><span class="xs">100 ml</span></div>
+    <div class="r ac" style="justify-content:space-between"><span class="s">Canela</span><span class="xs">al gusto</span></div>
+  </div>
+  <div class="b d"><span class="lbl">Preparación</span><span class="s">Triturar la avena, batir con huevo y clara, cuajar a fuego medio 4 min por lado.</span></div>
+  <div class="btn fill">Añadir al día de hoy</div>
+  <div style="height:8px"></div>
+</section>
+
+<!-- ░░ 07 ARMARIO ░░ -->
+<section class="sc" id="sc-armario">
+  <div class="sc-head"><div><span class="xs">‹ Inicio</span><h3>Armario</h3></div><span class="xs">61</span></div>
+  <div class="r" style="gap:8px;align-items:stretch">
+    <div style="width:22%;display:flex;flex-direction:column;gap:6px;flex:none">
+      <div class="r ac" style="gap:4px"><i class="mk">1</i></div>
+      <div class="ph" style="aspect-ratio:1;border-radius:14px;font-size:8px">Gorras</div>
+      <div class="ph" style="aspect-ratio:1;border-radius:14px;font-size:8px">Collar</div>
+      <div class="ph" style="aspect-ratio:1;border-radius:14px;font-size:8px;border-color:var(--moss);color:var(--moss)">Sudad</div>
+      <div class="ph" style="aspect-ratio:1;border-radius:14px;font-size:8px">Camis</div>
+      <div class="ph" style="aspect-ratio:1;border-radius:14px;font-size:8px">Pant</div>
+      <div class="ph" style="aspect-ratio:1;border-radius:14px;font-size:8px">Zapat</div>
+      <div class="ph" style="aspect-ratio:1;border-radius:14px;font-size:8px">Calc</div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:6px;min-width:0">
+      <div class="r ac" style="gap:6px;justify-content:flex-end"><i class="mk">2</i><span class="xs">arrastra para girar</span></div>
+      <div class="ph" style="flex:1;min-height:230px;border-radius:12px">Avatar 3D a cuerpo completo<br><br>rotación 360° con el dedo<br>las prendas se montan encima<br><br><span style="color:var(--clay)">la pieza más cara del proyecto</span></div>
+      <div class="scroll" style="justify-content:center"><span class="chip on">Quieto</span><span class="chip">Camina</span><span class="chip">Corre</span></div>
+    </div>
+  </div>
+  <div class="r ac" style="gap:6px"><i class="mk">3</i><span class="lbl">Sudaderas · 9</span></div>
+  <div class="scroll">
+    <div class="ph" style="width:56px;height:62px;flex:none;border-color:var(--moss)">puesta</div>
+    <div class="ph" style="width:56px;height:62px;flex:none">png</div>
+    <div class="ph" style="width:56px;height:62px;flex:none">png</div>
+    <div class="ph" style="width:56px;height:62px;flex:none">png</div>
+    <div class="ph" style="width:56px;height:62px;flex:none">+</div>
+  </div>
+  <div class="r" style="gap:7px"><div class="btn ghost" style="flex:1">Guardar conjunto</div><div class="btn ghost" style="flex:1">Quitar todo</div></div>
+  <div style="height:8px"></div>
+</section>
+
+<!-- ░░ 08 CAPRICHOS ░░ -->
+<section class="sc" id="sc-caprichos">
+  <div class="sc-head"><div><span class="xs">‹ Inicio</span><h3>Caprichos</h3></div></div>
+  <div class="r ac" style="gap:6px"><i class="mk">1</i><span class="lbl">Bloques por tema</span></div>
+  <div class="g2">
+    <div class="b d" style="padding:0;overflow:hidden"><div class="ph" style="aspect-ratio:1.2;border:0;border-radius:0">dibujo<br>arquitectura</div><div style="padding:7px 8px"><div class="t">Arquitectura</div><div class="xs">7 guardados</div></div></div>
+    <div class="b d" style="padding:0;overflow:hidden"><div class="ph" style="aspect-ratio:1.2;border:0;border-radius:0">dibujo<br>deporte</div><div style="padding:7px 8px"><div class="t">Deporte</div><div class="xs">12 guardados</div></div></div>
+    <div class="b d" style="padding:0;overflow:hidden"><div class="ph" style="aspect-ratio:1.2;border:0;border-radius:0">dibujo<br>regalos</div><div style="padding:7px 8px"><div class="t">Regalos</div><div class="xs">4 guardados</div></div></div>
+    <div class="b d" style="padding:0;overflow:hidden"><div class="ph" style="aspect-ratio:1.2;border:0;border-radius:0">dibujo<br>libros</div><div style="padding:7px 8px"><div class="t">Libros</div><div class="xs">9 guardados</div></div></div>
+  </div>
+  <div class="b d" style="padding:0;overflow:hidden"><div class="ph" style="aspect-ratio:2.4;border:0;border-radius:0">dibujo · viajes</div><div style="padding:7px 8px"><div class="r ac" style="justify-content:space-between"><div><div class="t">Viajes</div><div class="xs">14 lugares</div></div><i class="mk">2</i></div></div></div>
+  <div class="r ac" style="gap:6px"><i class="mk">3</i><span class="lbl">Este mes</span></div>
+  <div class="b"><div class="r ac" style="justify-content:space-between"><span class="s">Gastado</span><span class="t">0 €</span></div><div class="bar"><i style="width:4%"></i></div><span class="xs">cartera Caprichos · tope 150 €</span></div>
+  <div style="height:8px"></div>
+</section>
+
+<!-- ░░ 09 VIAJES ░░ -->
+<section class="sc" id="sc-viajes">
+  <div class="sc-head"><div><span class="xs">‹ Caprichos</span><h3>Viajes</h3></div><span class="xs">+ lugar</span></div>
+  <div class="r ac" style="gap:6px"><i class="mk">1</i><span class="lbl">Catálogo de lugares</span></div>
+  <div class="ph" style="aspect-ratio:1.45;border-radius:12px;position:relative;overflow:hidden">
+    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px">
+      <span style="font-family:var(--display);font-weight:700;font-size:15px;color:var(--ink)">Kioto</span>
+      <span class="xs">JAPÓN</span>
+    </div>
+    <span style="position:absolute;bottom:5px;left:0;right:0;font-size:8px">dibujo del lugar · bordes difuminados hacia el fondo</span>
+  </div>
+  <div class="ph" style="aspect-ratio:1.45;border-radius:12px;position:relative;overflow:hidden">
+    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px">
+      <span style="font-family:var(--display);font-weight:700;font-size:15px;color:var(--ink)">Dolomitas</span>
+      <span class="xs">ITALIA</span>
+    </div>
+  </div>
+  <div class="r ac" style="gap:6px"><i class="mk">2</i><span class="xs">una tarjeta por pantalla, scroll vertical con enganche</span></div>
+  <div class="r ac" style="gap:6px"><i class="mk">3</i><span class="lbl">Dentro de un lugar</span></div>
+  <div class="b d"><span class="s">Notas, presupuesto, fechas tentativas, mapa guardado y galería del sitio.</span></div>
+  <div style="height:8px"></div>
+</section>
+
+<!-- ░░ 10 CALENDARIO ░░ -->
+<section class="sc" id="sc-calendario">
+  <div class="sc-head"><div><span class="xs">‹ Inicio</span><h3>Calendario</h3></div><span class="xs">nov 2026</span></div>
+  <div class="r ac" style="gap:6px"><i class="mk">1</i><span class="lbl">Mes</span></div>
+  <div class="b">
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center">
+      <span class="xs">L</span><span class="xs">M</span><span class="xs">X</span><span class="xs">J</span><span class="xs">V</span><span class="xs">S</span><span class="xs">D</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center;font-size:10.5px;color:var(--ink-2)">
+      <span>26</span><span>27</span><span>28</span><span>29</span><span>30</span><span>31</span><span>1</span>
+      <span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span>
+      <span style="color:var(--moss);font-weight:600">9</span><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span>
+      <span>16</span><span>17</span><span>18</span><span>19</span><span>20</span><span>21</span><span>22</span>
+      <span>23</span><span>24</span><span>25</span><span>26</span><span>27</span><span>28</span><span>29</span>
+      <span>30</span><span></span><span></span><span></span><span></span><span></span><span></span>
+    </div>
+  </div>
+  <div class="r ac" style="gap:6px"><i class="mk">2</i><span class="lbl">Tipos de fecha</span></div>
+  <div class="scroll"><span class="chip on">Cumpleaños</span><span class="chip">Pagos</span><span class="chip">Entregas</span><span class="chip">Revisiones</span></div>
+  <div class="r ac" style="gap:6px"><i class="mk">3</i><span class="lbl">Próximas</span></div>
+  <div class="b"><div class="r ac" style="justify-content:space-between"><span class="s">Renovar dominio</span><span class="xs">12 nov</span></div>
+    <div class="hr"></div>
+    <div class="r ac" style="justify-content:space-between"><span class="s">Cumple de Marta</span><span class="xs">18 nov</span></div>
+    <div class="hr"></div>
+    <div class="r ac" style="justify-content:space-between"><span class="s">Revisión dentista</span><span class="xs">3 dic</span></div>
+  </div>
+  <div class="btn ghost">Nueva fecha</div>
+  <div style="height:8px"></div>
+</section>
+
+<!-- ░░ 11 EMPRENDIMIENTOS ░░ -->
+<section class="sc" id="sc-emprendimientos">
+  <div class="sc-head"><div><span class="xs">‹ Inicio</span><h3 style="font-size:17px">Emprendimientos</h3></div></div>
+  <div class="r ac" style="gap:6px"><i class="mk">1</i><span class="lbl">Estado</span></div>
+  <div class="scroll"><span class="chip on">En marcha</span><span class="chip">Idea</span><span class="chip">Pausado</span><span class="chip">Cerrado</span></div>
+  <div class="b"><div class="r ac" style="justify-content:space-between"><span class="t">Proyecto A</span><span class="chip on" style="padding:2px 7px">en marcha</span></div>
+    <div class="bar"><i style="width:62%"></i></div>
+    <span class="xs">Siguiente paso: cerrar proveedor</span>
+    <div class="hr"></div>
+    <div class="r" style="gap:12px"><span class="xs">Ingresos 0 €</span><span class="xs">Gasto 340 €</span><span class="xs">8 tareas</span></div>
+  </div>
+  <div class="b"><div class="r ac" style="justify-content:space-between"><span class="t">Proyecto B</span><span class="chip" style="padding:2px 7px">idea</span></div>
+    <div class="bar"><i style="width:14%"></i></div>
+    <span class="xs">Siguiente paso: validar con 5 personas</span>
+  </div>
+  <div class="r ac" style="gap:6px"><i class="mk">2</i><span class="lbl">Dentro del proyecto</span></div>
+  <div class="b d"><span class="s">Tareas, números, enlaces, archivos y un diario de decisiones con fecha.</span></div>
+  <div class="r ac" style="gap:6px"><i class="mk">3</i><span class="xs">engancha con Calendario y con Caprichos (gasto)</span></div>
+  <div class="btn ghost">Nuevo proyecto</div>
+  <div style="height:8px"></div>
+</section>
+
+<!-- ░░ 12 FORMACIÓN ░░ -->
+<section class="sc" id="sc-formacion">
+  <div class="sc-head"><div><span class="xs">‹ Inicio</span><h3>Formación</h3></div></div>
+  <div class="r ac" style="gap:6px"><i class="mk">1</i><span class="lbl">Cursos</span></div>
+  <div class="b"><div class="r ac" style="justify-content:space-between"><span class="t">Swift desde cero</span><span class="xs">41 %</span></div><div class="bar"><i style="width:41%"></i></div><span class="xs">lección 12 de 29 · ayer</span></div>
+  <div class="b"><div class="r ac" style="justify-content:space-between"><span class="t">Fotografía de producto</span><span class="xs">100 %</span></div><div class="bar"><i style="width:100%"></i></div><span class="xs">terminado en septiembre</span></div>
+  <div class="r ac" style="gap:6px"><i class="mk">2</i><span class="lbl">Conocimientos</span></div>
+  <div class="g2">
+    <div class="b d"><span class="t">SwiftUI</span><span class="xs">18 notas</span></div>
+    <div class="b d"><span class="t">Nutrición</span><span class="xs">11 notas</span></div>
+    <div class="b d"><span class="t">Finanzas</span><span class="xs">6 notas</span></div>
+    <div class="b d"><span class="t">Diseño</span><span class="xs">9 notas</span></div>
+  </div>
+  <div class="r ac" style="gap:6px"><i class="mk">3</i><span class="xs">una nota = título, cuerpo, etiquetas y de dónde salió</span></div>
+  <div class="r" style="gap:7px"><div class="btn ghost" style="flex:1">Nuevo curso</div><div class="btn ghost" style="flex:1">Nueva nota</div></div>
+  <div style="height:8px"></div>
+</section>
+
+<!-- ░░ 13 BIBLIOTECA ░░ -->
+<section class="sc" id="sc-biblioteca">
+  <div class="sc-head"><div><span class="xs">‹ Inicio</span><h3>Biblioteca</h3></div><span class="xs">+ libro</span></div>
+  <div class="r ac" style="gap:6px"><i class="mk">1</i><span class="lbl">Leyendo ahora</span></div>
+  <div class="b"><div class="r ac" style="gap:9px"><div class="ph" style="width:44px;height:64px;flex:none;border-radius:2px 6px 6px 2px">tapa</div>
+    <div style="min-width:0;flex:1;display:flex;flex-direction:column;gap:4px"><div class="t">El hombre en busca de sentido</div><div class="xs">pág. 84 de 168</div><div class="bar"><i style="width:50%"></i></div></div></div></div>
+  <div class="r ac" style="gap:6px"><i class="mk">2</i><span class="lbl">Estante · 23</span></div>
+  <div class="b d" style="padding:10px 8px">
+    <div class="scroll">
+      <div class="ph" style="width:26px;height:74px;flex:none;border-radius:2px">lomo</div>
+      <div class="ph" style="width:22px;height:74px;flex:none;border-radius:2px">lomo</div>
+      <div class="ph" style="width:30px;height:74px;flex:none;border-radius:2px">lomo</div>
+      <div class="ph" style="width:24px;height:74px;flex:none;border-radius:2px">lomo</div>
+      <div class="ph" style="width:28px;height:74px;flex:none;border-radius:2px">lomo</div>
+      <div class="ph" style="width:22px;height:74px;flex:none;border-radius:2px">lomo</div>
+    </div>
+    <div class="xs" style="text-align:center;padding-top:5px">balda 1 · narrativa</div>
+  </div>
+  <div class="r ac" style="gap:6px"><i class="mk">3</i><span class="lbl">Subrayados</span></div>
+  <div class="b d"><span class="s">Frases guardadas con página y libro. Se pueden mandar a una nota de Formación.</span></div>
+  <div style="height:8px"></div>
+</section>
+
+<!-- ░░ 17 FINANZAS ░░ -->
+<section class="sc" id="sc-finanzas">
+  <div class="sc-head"><div><span class="xs">‹ Inicio</span><h3>Finanzas</h3></div><span class="xs">+ gasto</span></div>
+
+  <div class="r ac" style="gap:6px"><i class="mk">1</i><span class="lbl">Aros</span></div>
+  <div class="scroll" style="justify-content:center"><span class="chip on">Gasto del mes</span><span class="chip">Ingresos</span><span class="chip">Saldo</span></div>
+  <div class="ph" style="aspect-ratio:1.3;border-radius:14px">Aros concéntricos<br><br>el de fuera, TOTAL<br>cada uno de dentro, una cartera<br><br>color de cada aro a tu gusto</div>
+  <div class="scroll" style="justify-content:center">
+    <span class="chip on">Total</span><span class="chip on">Diario</span><span class="chip on">Ahorro</span><span class="chip">Caprichos</span>
+  </div>
+  <div class="xs" style="text-align:center">configurar aros ›</div>
+
+  <div class="r ac" style="gap:6px"><i class="mk">2</i><span class="lbl">Carteras y bloques</span></div>
+  <div class="b">
+    <div class="r ac" style="justify-content:space-between"><div class="r ac" style="gap:6px"><span style="width:9px;height:9px;border-radius:999px;background:#3d6b4e;display:block;flex:none"></span><span class="t">Diario</span></div><span class="xs">1 388 € ›</span></div>
+    <div class="scroll" style="padding-top:3px">
+      <div class="b" style="min-width:76px;flex:none;padding:7px;gap:2px"><span class="xs">Saldo</span><span class="t">1 388 €</span></div>
+      <div class="b" style="min-width:76px;flex:none;padding:7px;gap:2px"><span class="xs">Entra</span><span class="t">1 800 €</span></div>
+      <div class="b" style="min-width:76px;flex:none;padding:7px;gap:2px"><span class="xs">Sale</span><span class="t">412 €</span></div>
+      <div class="b" style="min-width:76px;flex:none;padding:7px;gap:2px"><span class="xs">Media/día</span><span class="t">13,7 €</span></div>
+      <div class="ph" style="min-width:46px;flex:none;border-radius:8px;font-size:8px">+<br>bloque</div>
+    </div>
+  </div>
+  <div class="b">
+    <div class="r ac" style="justify-content:space-between"><div class="r ac" style="gap:6px"><span style="width:9px;height:9px;border-radius:999px;background:#a0553a;display:block;flex:none"></span><span class="t">Caprichos</span></div><span class="xs">150 € ›</span></div>
+    <div class="scroll" style="padding-top:3px">
+      <div class="b" style="min-width:76px;flex:none;padding:7px;gap:2px"><span class="xs">Saldo</span><span class="t">150 €</span></div>
+      <div class="b" style="min-width:76px;flex:none;padding:7px;gap:2px"><span class="xs">Sale</span><span class="t">0 €</span></div>
+      <div class="b" style="min-width:76px;flex:none;padding:7px;gap:2px"><span class="xs">Tope mes</span><span class="t">150 €</span></div>
+      <div class="ph" style="min-width:46px;flex:none;border-radius:8px;font-size:8px">+<br>bloque</div>
+    </div>
+  </div>
+  <div class="btn ghost" style="border-style:dashed">+ nueva cartera</div>
+
+  <div style="flex:1;min-height:10px"></div>
+
+  <div class="r ac" style="gap:6px"><i class="mk">3</i><span class="lbl">Reparto · siempre a la vista</span></div>
+  <div class="b" style="border-radius:16px;border-width:1.5px;gap:4px">
+    <div class="r ac" style="justify-content:space-between"><span class="xs">sobre el gasto del mes</span><span class="xs">cambiar ›</span></div>
+    <div class="r ac" style="justify-content:space-between"><span class="s">Diario</span><span class="t">46 %</span></div>
+    <div class="bar"><i style="width:46%"></i></div>
+    <div class="r ac" style="justify-content:space-between"><span class="s">Ahorro</span><span class="t">34 %</span></div>
+    <div class="bar"><i style="width:34%"></i></div>
+    <div class="r ac" style="justify-content:space-between"><span class="s">Caprichos</span><span class="t">20 %</span></div>
+    <div class="bar"><i style="width:20%"></i></div>
+  </div>
+  <div style="height:6px"></div>
+</section>
+
+<!-- ░░ 18 ANOTAR MOVIMIENTO ░░ -->
+<section class="sc" id="sc-movimiento">
+  <div class="sc-head"><span class="xs">Cancelar</span><span class="xs" style="color:var(--moss);font-weight:600">Guardar</span></div>
+
+  <div class="r ac" style="gap:6px"><i class="mk">1</i><span class="lbl">Qué es</span></div>
+  <div class="scroll" style="justify-content:center"><span class="chip on">Gasto</span><span class="chip">Ingreso</span><span class="chip">Traspaso</span></div>
+
+  <div class="r ac" style="gap:6px"><i class="mk">2</i><span class="lbl">Importe</span></div>
+  <div style="text-align:center;padding:2px 0">
+    <span style="font-family:var(--display);font-weight:700;font-size:38px;letter-spacing:-.02em">− 12,40</span><span style="font-family:var(--display);font-size:20px;color:var(--ink-3)"> €</span>
+  </div>
+  <div class="xs" style="text-align:center">el signo lo pone el tipo, no tú</div>
+
+  <div class="r ac" style="gap:6px"><i class="mk">3</i><span class="lbl">Cartera</span></div>
+  <div class="scroll"><span class="chip on">Diario</span><span class="chip">Ahorro</span><span class="chip">Caprichos</span><span class="chip">+ nueva</span></div>
+  <div class="scroll"><span class="xs" style="align-self:center">sección</span><span class="chip">Comida</span><span class="chip on">Transporte</span><span class="chip">Ocio</span></div>
+  <div class="b d"><span class="xs">en Ingreso la cartera es «dónde entra» · en Traspaso salen dos: de → a</span></div>
+
+  <div class="r ac" style="gap:6px"><i class="mk">4</i><span class="lbl">Lo demás, opcional</span></div>
+  <div class="r" style="gap:7px">
+    <div class="b d" style="flex:1;padding:7px;gap:2px"><span class="xs">Concepto</span><span class="s">Metro de vuelta</span></div>
+    <div class="b" style="width:74px;flex:none;padding:7px;gap:2px"><span class="xs">Fecha</span><span class="t">hoy</span></div>
+  </div>
+  <div class="ph" style="height:30px;border-radius:8px">foto del ticket</div>
+
+  <div class="r ac" style="gap:6px"><i class="mk">5</i><span class="lbl">Teclado propio</span></div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;font-family:var(--display);font-weight:500">
+    <div class="b" style="align-items:center;padding:9px">1</div><div class="b" style="align-items:center;padding:9px">2</div><div class="b" style="align-items:center;padding:9px">3</div>
+    <div class="b" style="align-items:center;padding:9px">4</div><div class="b" style="align-items:center;padding:9px">5</div><div class="b" style="align-items:center;padding:9px">6</div>
+    <div class="b" style="align-items:center;padding:9px">7</div><div class="b" style="align-items:center;padding:9px">8</div><div class="b" style="align-items:center;padding:9px">9</div>
+    <div class="b" style="align-items:center;padding:9px">,</div><div class="b" style="align-items:center;padding:9px">0</div><div class="b" style="align-items:center;padding:9px">⌫</div>
+  </div>
+  <div style="height:6px"></div>
+</section>
+
+<!-- ░░ 19 CARTERA ░░ -->
+<section class="sc" id="sc-cartera">
+  <div class="sc-head"><div><span class="xs">‹ Finanzas</span><h3>Diario</h3></div><span class="xs">editar</span></div>
+
+  <div class="r ac" style="gap:6px"><i class="mk">1</i><span class="lbl">La cartera</span></div>
+  <div class="b" style="border-radius:14px">
+    <div class="r ac" style="gap:11px">
+      <div class="ph" style="width:58px;height:58px;border-radius:999px;flex:none;font-size:8px">su aro</div>
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+        <span class="t" style="font-size:21px">1 388 €</span>
+        <span class="xs">saldo · entra 1 800 · sale 412</span>
+        <div class="bar"><i style="width:82%"></i></div>
+        <span class="xs">gasto 412 € de un tope de 500 €</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="r ac" style="gap:6px"><i class="mk">2</i><span class="lbl">Secciones</span></div>
+  <div class="b">
+    <div class="r ac" style="justify-content:space-between;gap:6px"><div class="r ac" style="gap:6px;min-width:0"><span class="chip on" style="padding:1px 6px;font-size:8px">subcartera</span><span class="s">Comida</span></div><span class="xs">206 € ›</span></div>
+    <div class="hr"></div>
+    <div class="r ac" style="justify-content:space-between;gap:6px"><div class="r ac" style="gap:6px;min-width:0"><span class="chip" style="padding:1px 6px;font-size:8px">etiqueta</span><span class="s">Transporte</span></div><span class="xs">94 € ›</span></div>
+    <div class="hr"></div>
+    <div class="r ac" style="justify-content:space-between;gap:6px"><div class="r ac" style="gap:6px;min-width:0"><span class="chip" style="padding:1px 6px;font-size:8px">etiqueta</span><span class="s">Ocio</span></div><span class="xs">112 € ›</span></div>
+    <div class="hr"></div>
+    <span class="xs">+ sección</span>
+  </div>
+
+  <div class="r ac" style="gap:6px"><i class="mk">3</i><span class="lbl">Bloques de esta cartera</span></div>
+  <div class="scroll">
+    <div class="b" style="min-width:80px;flex:none;padding:7px;gap:2px"><span class="xs">Media/día</span><span class="t">13,7 €</span></div>
+    <div class="b" style="min-width:80px;flex:none;padding:7px;gap:2px"><span class="xs">Mayor gasto</span><span class="t">48 €</span></div>
+    <div class="b" style="min-width:80px;flex:none;padding:7px;gap:2px"><span class="xs">Días sin gastar</span><span class="t">4</span></div>
+    <div class="ph" style="min-width:46px;flex:none;border-radius:8px;font-size:8px">+<br>bloque</div>
+  </div>
+
+  <div class="r ac" style="gap:6px"><i class="mk">4</i><span class="lbl">Movimientos</span></div>
+  <div class="b">
+    <div class="r ac" style="justify-content:space-between"><div><div class="s">Metro de vuelta</div><div class="xs">transporte · hoy</div></div><span class="t">− 12,40 €</span></div>
+    <div class="hr"></div>
+    <div class="r ac" style="justify-content:space-between"><div><div class="s">A Ahorro</div><div class="xs">traspaso · ayer</div></div><span class="t" style="opacity:.6">→ 300,00 €</span></div>
+    <div class="hr"></div>
+    <div class="r ac" style="justify-content:space-between"><div><div class="s">Compra semanal</div><div class="xs">comida · ayer</div></div><span class="t">− 48,00 €</span></div>
+    <div class="hr"></div>
+    <div class="r ac" style="justify-content:space-between"><div><div class="s">Nómina</div><div class="xs">ingreso · 1 nov</div></div><span class="t" style="color:var(--moss)">+ 1 800,00 €</span></div>
+  </div>
+  <div style="height:8px"></div>
+</section>
+
+<!-- ░░ 20 AROS ░░ -->
+<section class="sc" id="sc-aros">
+  <div class="sc-head"><div><span class="xs">‹ Finanzas</span><h3>Aros</h3></div><span class="xs">listo</span></div>
+
+  <div class="r ac" style="gap:6px"><i class="mk">1</i><span class="lbl">Cómo va quedando</span></div>
+  <div class="ph" style="aspect-ratio:1.6;border-radius:12px">vista previa en vivo<br>cambia al tocar cualquier opción</div>
+
+  <div class="r ac" style="gap:6px"><i class="mk">2</i><span class="lbl">Qué aros se ven</span></div>
+  <div class="b">
+    <div class="r ac" style="justify-content:space-between"><div class="r ac" style="gap:7px"><span style="width:11px;height:11px;border-radius:999px;background:#5c665f;display:block;flex:none"></span><span class="s">Total</span><span class="xs">exterior · fijo</span></div><span class="xs">⇅</span></div>
+    <div class="hr"></div>
+    <div class="r ac" style="justify-content:space-between"><div class="r ac" style="gap:7px"><span style="width:11px;height:11px;border-radius:999px;background:#3d6b4e;display:block;flex:none"></span><span class="s">Diario</span></div><span class="xs">⇅ · visible</span></div>
+    <div class="hr"></div>
+    <div class="r ac" style="justify-content:space-between"><div class="r ac" style="gap:7px"><span style="width:11px;height:11px;border-radius:999px;background:#4a6fa5;display:block;flex:none"></span><span class="s">Ahorro</span></div><span class="xs">⇅ · visible</span></div>
+    <div class="hr"></div>
+    <div class="r ac" style="justify-content:space-between"><div class="r ac" style="gap:7px"><span style="width:11px;height:11px;border-radius:999px;background:#a0553a;display:block;flex:none"></span><span class="s" style="opacity:.5">Caprichos</span></div><span class="xs" style="opacity:.5">⇅ · oculto</span></div>
+  </div>
+  <div class="xs" style="text-align:center">el orden de la lista es de fuera hacia dentro</div>
+
+  <div class="r ac" style="gap:6px"><i class="mk">3</i><span class="lbl">Color de Diario</span></div>
+  <div class="r" style="gap:8px;justify-content:space-between">
+    <span style="width:30px;height:30px;border-radius:999px;background:#3d6b4e;display:block;box-shadow:0 0 0 2px var(--screen),0 0 0 3.5px #3d6b4e"></span>
+    <span style="width:30px;height:30px;border-radius:999px;background:#4a6fa5;display:block"></span>
+    <span style="width:30px;height:30px;border-radius:999px;background:#a0553a;display:block"></span>
+    <span style="width:30px;height:30px;border-radius:999px;background:#8a6aa8;display:block"></span>
+    <span style="width:30px;height:30px;border-radius:999px;background:#c39b3a;display:block"></span>
+    <span style="width:30px;height:30px;border-radius:999px;background:#5c665f;display:block"></span>
+  </div>
+
+  <div class="r ac" style="gap:6px"><i class="mk">4</i><span class="lbl">Grosor</span></div>
+  <div class="scroll"><span class="chip">fino</span><span class="chip on">medio</span><span class="chip">grueso</span></div>
+  <div style="height:8px"></div>
+</section>
+
+<!-- ░░ 21 AJUSTES ░░ -->
+<section class="sc" id="sc-ajustes">
+  <div class="sc-head"><div><span class="xs">‹ Inicio</span><h3>Ajustes</h3></div></div>
+  <div class="r ac" style="gap:6px"><i class="mk">1</i><span class="lbl">Entrada</span></div>
+  <div class="b">
+    <div class="r ac" style="justify-content:space-between"><span class="s">Face ID</span><div style="width:34px;height:20px;border-radius:999px;border:1px solid var(--moss);background:var(--moss);opacity:.85;position:relative"><span style="position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:999px;background:var(--screen)"></span></div></div>
+    <div class="hr"></div>
+    <div class="r ac" style="justify-content:space-between"><span class="s">Cambiar trazo</span><span class="xs">›</span></div>
+    <div class="hr"></div>
+    <div class="r ac" style="justify-content:space-between"><span class="s">Bloquear al salir</span><span class="xs">al instante ›</span></div>
+  </div>
+  <div class="r ac" style="gap:6px"><i class="mk">2</i><span class="lbl">Grabar trazo nuevo</span></div>
+  <div class="ph" style="aspect-ratio:1.5;border-radius:18px">Dibújalo dos veces<br>para confirmarlo</div>
+  <div class="r ac" style="gap:6px"><i class="mk">3</i><span class="lbl">Datos</span></div>
+  <div class="b">
+    <div class="r ac" style="justify-content:space-between"><span class="s">Copia en iCloud</span><span class="xs">cifrada ›</span></div>
+    <div class="hr"></div>
+    <div class="r ac" style="justify-content:space-between"><span class="s">Exportar todo</span><span class="xs">›</span></div>
+    <div class="hr"></div>
+    <div class="r ac" style="justify-content:space-between"><span class="s">Apariencia</span><span class="xs">sistema ›</span></div>
+  </div>
+  <div class="xs" style="text-align:center;padding-bottom:8px">Tree Center 0.1 · boceto</div>
+</section>
+
+            </div><!-- /viewport -->
+            <div class="homebar"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MAPA (reemplaza al teléfono) -->
+      <div class="map" id="map" hidden>
+        <svg viewBox="0 0 780 700" role="img" aria-label="Mapa de navegación de Tree Center">
+          <defs>
+            <style>
+              .nd{fill:var(--card);stroke:var(--rule);stroke-width:1}
+              .nd-k{fill:var(--card);stroke:var(--moss);stroke-width:1.5}
+              .tx{font-family:var(--body);font-size:12.5px;fill:var(--ink)}
+              .tx-s{font-family:var(--mono);font-size:9.5px;fill:var(--ink-3)}
+              .ln{stroke:var(--rule);stroke-width:1.2;fill:none}
+              .ln-k{stroke:var(--moss);stroke-width:1.5;fill:none}
+            </style>
+          </defs>
+
+          <!-- tronco -->
+          <path class="ln-k" d="M120 326h46"/>
+          <rect class="nd-k" x="10" y="300" width="110" height="52" rx="9"/>
+          <text class="tx" x="24" y="322">Acceso</text>
+          <text class="tx-s" x="24" y="339">trazo / Face ID</text>
+
+          <rect class="nd-k" x="166" y="300" width="96" height="52" rx="9"/>
+          <text class="tx" x="180" y="322">Home</text>
+          <text class="tx-s" x="180" y="339">widgets</text>
+
+          <!-- widgets, por encima del home -->
+          <path class="ln" d="M214 300V232"/>
+          <rect class="nd" x="150" y="200" width="128" height="32" rx="7"/>
+          <text class="tx" x="164" y="221">Widgets</text>
+
+          <!-- ramas -->
+          <path class="ln" d="M262 326H302V46H342"/>
+          <path class="ln" d="M262 326H302V116H342"/>
+          <path class="ln" d="M262 326H302V186H342"/>
+          <path class="ln" d="M262 326H302V256H342"/>
+          <path class="ln" d="M262 326H342"/>
+          <path class="ln" d="M262 326H302V396H342"/>
+          <path class="ln" d="M262 326H302V466H342"/>
+          <path class="ln" d="M262 326H302V536H342"/>
+          <path class="ln" d="M262 326H302V606H342"/>
+
+          <rect class="nd-k" x="342" y="30" width="150" height="32" rx="7"/><text class="tx" x="356" y="51">Gimnasio</text>
+          <rect class="nd-k" x="342" y="100" width="150" height="32" rx="7"/><text class="tx" x="356" y="121">Alimentación</text>
+          <rect class="nd-k" x="342" y="170" width="150" height="32" rx="7"/><text class="tx" x="356" y="191">Armario</text>
+          <rect class="nd-k" x="342" y="240" width="150" height="32" rx="7"/><text class="tx" x="356" y="261">Caprichos</text>
+          <rect class="nd" x="342" y="310" width="150" height="32" rx="7"/><text class="tx" x="356" y="331">Finanzas</text>
+          <rect class="nd" x="342" y="380" width="150" height="32" rx="7"/><text class="tx" x="356" y="401">Calendario</text>
+          <rect class="nd" x="342" y="450" width="150" height="32" rx="7"/><text class="tx" x="356" y="471">Emprendimientos</text>
+          <rect class="nd" x="342" y="520" width="150" height="32" rx="7"/><text class="tx" x="356" y="541">Formación</text>
+          <rect class="nd" x="342" y="590" width="150" height="32" rx="7"/><text class="tx" x="356" y="611">Biblioteca</text>
+
+          <!-- hojas -->
+          <path class="ln-k" d="M492 46H524V24H556"/>
+          <path class="ln-k" d="M492 46H524V68H556"/>
+          <rect class="nd" x="556" y="8" width="176" height="32" rx="7"/><text class="tx" x="570" y="29">Rutina · semana</text>
+          <rect class="nd" x="556" y="52" width="176" height="32" rx="7"/><text class="tx" x="570" y="73">Ejercicio + animación</text>
+
+          <path class="ln-k" d="M492 116H524V104H556"/>
+          <path class="ln-k" d="M492 116H524V148H556"/>
+          <rect class="nd" x="556" y="88" width="176" height="32" rx="7"/><text class="tx" x="570" y="109">Libro abierto</text>
+          <rect class="nd" x="556" y="132" width="176" height="32" rx="7"/><text class="tx" x="570" y="153">Ficha + cámara</text>
+
+          <path class="ln-k" d="M492 186H524V192H556"/>
+          <rect class="nd" x="556" y="176" width="176" height="32" rx="7"/><text class="tx" x="570" y="197">Avatar 3D</text>
+
+          <path class="ln-k" d="M492 256H556"/>
+          <rect class="nd" x="556" y="240" width="176" height="32" rx="7"/><text class="tx" x="570" y="261">Viajes · lugares</text>
+
+          <path class="ln" d="M492 326H524V300H556"/>
+          <path class="ln" d="M492 326H524V344H556"/>
+          <path class="ln" d="M492 326H524V388H556"/>
+          <rect class="nd" x="556" y="284" width="176" height="32" rx="7"/><text class="tx" x="570" y="305">Movimiento rápido</text>
+          <rect class="nd" x="556" y="328" width="176" height="32" rx="7"/><text class="tx" x="570" y="349">Cartera · secciones</text>
+          <rect class="nd" x="556" y="372" width="176" height="32" rx="7"/><text class="tx" x="570" y="393">Aros del gráfico</text>
+
+          <!-- ajustes -->
+          <path class="ln" d="M214 352V672H342"/>
+          <rect class="nd" x="342" y="656" width="150" height="32" rx="7"/><text class="tx" x="356" y="677">Ajustes</text>
+
+          <text class="tx-s" x="10" y="376">una sola puerta</text>
+          <text class="tx-s" x="556" y="440">verde = 3D, cámara o animación</text>
+        </svg>
+      </div>
+
+      <div class="spec" id="spec"></div>
+    </div>
+
+    <!-- NOTAS -->
+    <aside class="notes" id="notes" aria-live="polite"></aside>
+  </div>
+
+  <footer>
+    <span>Tree Center · moldes v0.1</span>
+    <span>Siguiente fase: design</span>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var DEVICES = [
+    {id:"13pro", label:"13 Pro", w:390, h:844, r:48, top:47, bot:34, cut:"notch"},
+    {id:"15pro", label:"14/15 Pro", w:393, h:852, r:55, top:59, bot:34, cut:"island"},
+    {id:"16pro", label:"16/17 Pro", w:402, h:874, r:62, top:62, bot:34, cut:"island"},
+    {id:"max",   label:"17 Pro Max", w:440, h:956, r:62, top:62, bot:34, cut:"island"}
+  ];
+
+  var GROUPS = [
+    {name:"Entrada", items:["acceso","home","widgets"]},
+    {name:"Gimnasio", items:["gimnasio","rutina","ejercicio"]},
+    {name:"Día a día", items:["alimentacion","libro","ficha","armario","caprichos","viajes"]},
+    {name:"Proyectos", items:["calendario","emprendimientos","formacion","biblioteca"]},
+    {name:"Finanzas", items:["finanzas","movimiento","cartera","aros"]},
+    {name:"Sistema", items:["ajustes","mapa"]}
+  ];
+
+  var S = {
+    acceso:{
+      n:"01", nav:"Acceso",
+      title:"Acceso",
+      intro:"La primera pantalla, antes de que se cargue un solo dato. No hay forma de ver nada sin pasar por aquí.",
+      items:[
+        ["Lienzo de patrón","Cuadrado de 280 × 280 pt con esquinas de 32 pt. Dibujas con el dedo y la pantalla no muestra el trazo: ni línea, ni puntos, ni rastro. Nadie puede copiarte mirando."],
+        ["Tolerancia del trazo","Una Z dibujada a mano nunca sale idéntica dos veces. Se guarda la forma normalizada (dirección, giros, proporción) y se compara con un margen configurable: estricto, normal o flexible. Tras 3 fallos, 30 segundos de espera."],
+        ["Face ID primero","Face ID es la puerta rápida y el trazo es tu respaldo. Si Face ID falla o lo apagas, el trazo entra solo."]
+      ],
+      swift:"<code>LocalAuthentication</code> para Face ID. El lienzo con <code>Canvas</code> + <code>DragGesture</code>, guardando los puntos y resampleándolos a 64 antes de comparar. La plantilla del trazo va al Keychain con <code>.whenPasscodeSetThisDeviceOnly</code>, nunca a iCloud.",
+      warn:null
+    },
+    home:{
+      n:"02", nav:"Home",
+      title:"Home",
+      intro:"El centro del árbol: arriba los widgets que montes tú, debajo la barra con el resto de secciones y, pegados al borde, los cuatro botones.",
+      items:[
+        ["Widgets","Gimnasio, Alimentación y Calendario viven aquí como widgets, no como tarjetas todas iguales. Cada sección trae varios diseños y tres tamaños (1×1, 2×1, 2×2), y el orden lo pones tú arrastrando. Lo que enseñan son datos de hoy, no adorno."],
+        ["Barra de secciones","Rectángulo de esquinas redondas con las secciones que no tienen widget: Armario, Caprichos, Emprendimientos, Formación, Biblioteca y ahora Finanzas, con el icono dibujado encima del nombre. Con seis ya no caben de una, así que la barra desliza en horizontal en vez de encoger los iconos."],
+        ["Los cuatro botones, abajo del todo","Bajados hasta el borde, como pediste: quedan sobre los 34 pt del indicador de inicio, donde llega el pulgar sin estirar la mano."]
+      ],
+      swift:"Los diseños de widget, un <code>enum</code> por sección, colocados en una <code>LazyVGrid</code> de dos columnas donde el 2×2 ocupa las dos. El orden se guarda con SwiftData. La barra de secciones y la de botones van fuera del scroll, fijas.",
+      warn:null
+    },
+    widgets:{
+      n:"03", nav:"Home · widgets",
+      title:"Galería de widgets",
+      intro:"Donde eliges qué sale en tu inicio, con qué cara y de qué tamaño.",
+      items:[
+        ["En tu inicio","Lo que tienes puesto, con reordenar y quitar. Es el espejo exacto del Home."],
+        ["Diseños","El gimnasio, por ejemplo, puede salir como anillo de semana, como barras de los siete días o como una cifra grande. Mismo dato, lectura distinta según lo que te interese ese mes."],
+        ["Tamaño","1×1, 2×1 y 2×2. El diseño manda sobre el tamaño: el anillo solo existe en 2×2, porque en 1×1 no se lee."],
+        ["Lo que no es widget","Las cinco secciones restantes viven en la barra de abajo. Cualquiera puede subir a widget y cualquier widget puede bajar a la barra."]
+      ],
+      swift:"Ojo con el nombre: esto son widgets dentro de la app. Si además los quieres en la pantalla de bloqueo del iPhone, eso es WidgetKit y es un trabajo aparte.",
+      warn:null
+    },
+    gimnasio:{
+      n:"04", nav:"Gimnasio",
+      title:"Gimnasio",
+      intro:"Con la marca Bodytone en la cabecera y la semana por delante de todo lo demás.",
+      items:[
+        ["Tu semana","Los siete días siempre visibles. Los de entreno con borde, el de hoy en verde, y sábado y domingo más oscuros porque son descanso. De un vistazo sabes si vas al día."],
+        ["Hoy","Los ejercicios de la sesión, cada uno con la miniatura de su animación a la izquierda. Tocas uno y entras en su ficha; tocas Empezar entreno y van saliendo en orden."],
+        ["Progresión","Selector encima de la gráfica: peso máximo, volumen total o repeticiones. Son los mismos datos leídos de tres formas, así que es un cálculo con tres vistas, no tres funciones. Abre en peso máximo, que es el que se lee de un vistazo, y debajo queda el salto del periodo."]
+      ],
+      swift:"<code>Charts</code> de Apple para la progresión y SwiftData para rutina, sesiones y series. El selector es un <code>Picker</code> que solo cambia qué propiedad se dibuja: la serie de datos por debajo es la misma.",
+      warn:"Bodytone es una marca real de material de gimnasio. Para una app tuya que no sale del móvil no hay problema; si algún día la publicas, haría falta su permiso o un nombre propio."
+    },
+    rutina:{
+      n:"05", nav:"Gimnasio · rutina",
+      title:"Crear rutina",
+      intro:"Montas la semana una vez y la app te la sirve cada día.",
+      items:[
+        ["Días con regla","Los siete días en fila; tocas para quitar o poner. La regla va metida en el molde: solo sábado y domingo se pueden quitar, y como mucho los dos. De lunes a viernes ni responden al toque, y por eso salen marcados como fijos. Un día quitado queda como descanso, no desaparece de la semana."],
+        ["Qué toca cada día","A cada día activo le asignas una sesión: empuje, tirón, pierna, lo que montes. Los días libres se quedan en gris y dicen descanso."],
+        ["Dentro del día","Los ejercicios de esa sesión con sus series y repeticiones. Cada uno arrastra su propia animación desde la lista de ejercicios."]
+      ],
+      swift:"La regla va en el modelo, no en la vista: cada día tiene <code>esDescansable</code> y la rutina valida que no haya más de dos descansos. Así no se puede romper desde ninguna pantalla.",
+      warn:null
+    },
+    ejercicio:{
+      n:"06", nav:"Gimnasio · ejercicio",
+      title:"Ficha de ejercicio",
+      intro:"Aquí vive la animación, y aquí registras las series mientras entrenas.",
+      items:[
+        ["La animación","Una personita dibujada haciendo el ejercicio, en bucle, unos 2 s por repetición. Trazo plano y el mismo estilo en todos: si cada ejercicio va por su lado, la app parece un collage."],
+        ["Vistas y velocidad","Lento para fijarte en la técnica, y lateral o frontal según lo que quieras ver. Dos vistas por ejercicio es el doble de trabajo de dibujo, así que yo empezaría solo con la lateral."],
+        ["Series","Las hechas, la que toca ahora resaltada y las que quedan en gris. Al marcar una, el cronómetro de descanso arranca solo."],
+        ["Técnica y marca","Tres puntos de técnica, no un tratado, y tus números: máximo, última vez y veces que lo has hecho."]
+      ],
+      swift:"Las animaciones con Lottie (<code>lottie-ios</code>): son JSON vectoriales, pesan poquísimo, se escalan sin pixelarse y se controlan desde SwiftUI. Mejor que GIF, que se ve borroso en pantalla Retina y no se puede pausar bien.",
+      warn:"Esto es trabajo de ilustración, no de programación: una animación por ejercicio. Con 40 ejercicios son 40 animaciones. Empezaría por los 10 o 12 que de verdad haces y añadiría el resto con el tiempo."
+    },
+    alimentacion:{
+      n:"07", nav:"Alimentación · estantería",
+      title:"Alimentación",
+      intro:"Tu idea del libro 3D, hecha molde. La estantería es la portada de la sección.",
+      items:[
+        ["Estantería en horizontal","Las tapas se deslizan a derecha e izquierda. La del centro está de frente y grande; las de los lados giran hacia dentro y pierden tamaño y foco, así que siempre sabes cuál vas a abrir."],
+        ["Libros que creas tú","Recetas, Básicos, Suplementos y los que añadas. Cada libro guarda su nombre, su color de tapa y sus capítulos."],
+        ["Atajos","Foto de comida y buscar alimento, para los días en que solo quieres registrar y salir."]
+      ],
+      swift:"Esto se hace sin motor 3D: <code>ScrollView</code> horizontal con <code>scrollTransition</code> y <code>rotation3DEffect</code> sobre cada tapa. Rinde a 120 Hz en tu 13 Pro y es mucho menos trabajo que SceneKit.",
+      warn:null
+    },
+    libro:{
+      n:"08", nav:"Alimentación · libro",
+      title:"Dentro del libro",
+      intro:"El libro abierto: capítulos a la izquierda, fichas a la derecha.",
+      items:[
+        ["Doble página","Columna estrecha con los capítulos y columna ancha con las fichas del capítulo elegido. En el 13 Pro caben las dos; en Pro Max sobra sitio para una tercera miniatura por fila."],
+        ["Pasar página","Arrastrando desde el borde. La animación cuesta poco y es lo que hace que se sienta libro y no lista."],
+        ["Entrar contenido","Cámara y Adjuntar PNG viven aquí abajo, siempre a mano, y también dentro de cada ficha."]
+      ],
+      swift:"La doble página con un <code>HStack</code> y el giro con <code>rotation3DEffect</code> anclado en <code>.leading</code>. Los datos con SwiftData, que te da el guardado solo.",
+      warn:null
+    },
+    ficha:{
+      n:"09", nav:"Alimentación · ficha",
+      title:"Ficha de receta",
+      intro:"La hoja individual. Es donde entran las imágenes y donde algún día entrará la automatización.",
+      items:[
+        ["Imagen","PNG recortado o foto hecha ahí mismo. iOS sabe recortar el plato del fondo él solo, así que una foto cualquiera puede quedar como un PNG limpio."],
+        ["Macros","Cuatro cifras en línea: kcal, proteína, hidratos y grasa. Alineadas con números de ancho fijo para que no bailen al cambiar."],
+        ["Ingredientes y preparación","Lista con cantidad y pasos. De aquí sale el botón que suma la receta al día de hoy."]
+      ],
+      swift:"<code>PhotosPicker</code> para la galería, <code>VisionKit</code> para la cámara y <code>VNGenerateForegroundInstanceMaskRequest</code> para el recorte automático del plato.",
+      warn:"Lo de que reconozca la comida y rellene los macros solo es una fase posterior, y la menos fiable: ningún modelo acierta los gramos de una foto. Lo dejo apuntado para cuando el resto funcione."
+    },
+    armario:{
+      n:"10", nav:"Armario · avatar",
+      title:"Armario",
+      intro:"Categorías a la izquierda, avatar al centro, prendas de la categoría abajo. Lo que pediste, con una advertencia grande.",
+      items:[
+        ["Rail de categorías","Cuadrados de esquinas redondas en la columna izquierda: gorras, collares, sudaderas, camisetas, pantalones, zapatos y calcetines. El activo se marca, no se agranda, para que el rail no se mueva."],
+        ["Avatar","Cuerpo completo, giro de 360° arrastrando. Las prendas se montan encima como piezas separadas, no como una imagen plana."],
+        ["Prendas y conjuntos","Tira horizontal con las prendas de la categoría activa; la que llevas puesta queda marcada. Un conjunto guardado es una lista de prendas con nombre."]
+      ],
+      swift:"RealityKit con un maniquí riggeado y las prendas como mallas atadas al esqueleto. Las animaciones de caminar y correr se compran o se bajan de Mixamo, no se hacen a mano.",
+      warn:"Esta es la pieza más cara del proyecto, con diferencia. Un avatar realista con ropa que cae bien es trabajo de modelado 3D, no de programación. Mi consejo: arrancar con un maniquí estilizado sin cara, que es rápido y queda elegante, y dejar el realismo para cuando la app ya la uses a diario."
+    },
+    caprichos:{
+      n:"11", nav:"Caprichos",
+      title:"Caprichos",
+      intro:"Bloques por tema, cada uno con su dibujo propio. Es la sección más visual de la app.",
+      items:[
+        ["Bloques","Arquitectura, deporte, regalos, libros y viajes. Cada bloque es una tarjeta con su ilustración arriba y el nombre debajo, para que se distingan de un vistazo sin leer."],
+        ["Viajes aparte","Viajes se lleva una tarjeta ancha porque tiene catálogo propio dentro. Los demás bloques son listas."],
+        ["Gasto del mes","Ya no es un invento mío suelto: es la cartera Caprichos de Finanzas, asomada aquí. Mismo dato en los dos sitios, se apunte desde donde se apunte, y el tope lo pones tú."]
+      ],
+      swift:"Las ilustraciones, como activos vectoriales en el catálogo de assets, con variante clara y oscura.",
+      warn:null
+    },
+    viajes:{
+      n:"12", nav:"Caprichos · viajes",
+      title:"Viajes",
+      intro:"El catálogo de lugares: nombre en el centro y el sitio de fondo, con los bordes difuminados para que la tarjeta se integre.",
+      items:[
+        ["Tarjeta de lugar","Dibujo del sitio ocupando toda la tarjeta, nombre grande centrado y el país debajo en versales pequeñas. El difuminado va solo en los bordes, hacia el fondo de la app."],
+        ["Una por pantalla","Scroll vertical con enganche: cada tarjeta se queda centrada al soltar. Así cada lugar tiene su momento en vez de ser una fila de una lista."],
+        ["Dentro del lugar","Notas, presupuesto, fechas tentativas, mapa guardado y galería. Las fechas tentativas pueden enviarse al Calendario."]
+      ],
+      swift:"El difuminado con <code>.mask()</code> y un gradiente radial, no con sombras. Enganche con <code>scrollTargetBehavior(.viewAligned)</code>.",
+      warn:null
+    },
+    calendario:{
+      n:"13", nav:"Calendario",
+      title:"Calendario",
+      intro:"Fechas que importan, no una agenda de reuniones. Vive aparte del calendario del iPhone.",
+      items:[
+        ["Mes","Rejilla de siete columnas con punto en los días que tienen algo. El día de hoy se marca en verde."],
+        ["Tipos de fecha","Cumpleaños, pagos, entregas y revisiones. El tipo decide el color del punto y cuándo avisa."],
+        ["Próximas","Las tres siguientes fechas, siempre visibles debajo del mes, porque es lo que de verdad consultas."]
+      ],
+      swift:"Rejilla propia con <code>LazyVGrid</code> y <code>Calendar</code> para los días. Avisos con <code>UNUserNotificationCenter</code>.",
+      warn:null
+    },
+    emprendimientos:{
+      n:"14", nav:"Emprendimientos",
+      title:"Emprendimientos",
+      intro:"Proyectos con estado, avance y un único siguiente paso visible.",
+      items:[
+        ["Estado","En marcha, idea, pausado y cerrado. Filtrar por estado es lo primero que vas a querer hacer."],
+        ["Dentro del proyecto","Tareas, números, enlaces, archivos y un diario de decisiones con fecha. El diario es lo que te salva dentro de seis meses."],
+        ["Enganches","El siguiente paso con fecha aparece en Calendario; el gasto del proyecto suma en su propio total, separado de Caprichos."]
+      ],
+      swift:"Un modelo de SwiftData con relaciones a tareas y apuntes, y el estado como <code>enum</code> para que no se escriba a mano.",
+      warn:null
+    },
+    formacion:{
+      n:"15", nav:"Formación",
+      title:"Formación",
+      intro:"Dos cosas distintas en una sección: lo que estás estudiando y lo que ya sabes.",
+      items:[
+        ["Cursos","Con barra de avance y la última lección tocada. Terminado no desaparece: se queda al 100 % como registro."],
+        ["Conocimientos","Temas con notas dentro. Es tu base de conocimiento: SwiftUI, nutrición, finanzas, diseño."],
+        ["Una nota","Título, cuerpo, etiquetas y de dónde salió. Esa última parte permite que un subrayado de Biblioteca llegue aquí con su origen."]
+      ],
+      swift:"Buscador con <code>.searchable</code> sobre notas y cursos a la vez.",
+      warn:null
+    },
+    biblioteca:{
+      n:"16", nav:"Biblioteca",
+      title:"Biblioteca",
+      intro:"Libros de lectura, separados de los libros de recetas de Alimentación. Mismo lenguaje visual, datos distintos.",
+      items:[
+        ["Leyendo ahora","Un solo libro destacado con página actual y avance. Es la razón de entrar aquí."],
+        ["Estante","Lomos en horizontal, por baldas que tú defines (narrativa, ensayo, técnico). El ancho de cada lomo lo da el número de páginas, un detalle pequeño que hace que el estante parezca real."],
+        ["Subrayados","Frases con página y libro. Se pueden mandar a una nota de Formación sin copiar y pegar."]
+      ],
+      swift:"Los lomos son <code>Rectangle</code> con el color de la tapa y el título girado 90°, dibujados, no fotos.",
+      warn:null
+    },
+    finanzas:{
+      n:"17", nav:"Finanzas",
+      title:"Finanzas",
+      intro:"Apuntar un movimiento en tres toques y ver al momento cómo se reparte. Todo gira alrededor de las carteras, que ahora llevan saldo porque también entran ingresos.",
+      items:[
+        ["Aros","Aros concéntricos: el de fuera es el Total y cada uno de dentro es una cartera. Arriba eliges qué miden, igual que en la gráfica del gimnasio: gasto del mes, ingresos o saldo. Los enciendes y apagas desde los chips y el color lo pones tú. Pasados cuatro o cinco el gráfico deja de leerse, así que la pantalla de Aros avisa en vez de dejarte llenarlo."],
+        ["Carteras y bloques","Debajo del gráfico, una tarjeta por cartera, con su saldo al lado del nombre. Dentro, los bloques se apilan de costado: saldo, entra, sale, media al día, los que añadas. Cuando dejan de caber, la fila desliza en horizontal en lugar de bajar a otra línea."],
+        ["Qué se reinicia y qué no","El saldo es acumulado: arrastra de un mes al siguiente y no se toca nunca al cambiar de mes. Entra, sale y el tope de gasto sí son del mes en curso y vuelven a cero el día 1. Esa diferencia es lo que hace que el saldo sea un saldo de verdad y no un recuento mensual."],
+        ["Reparto","El recuadro de abajo con el porcentaje de cada cartera, siempre visible. Mide lo mismo que los aros, así que el selector de arriba también lo cambia a él: no tendría sentido que el gráfico hable de saldo y el recuadro de gasto."]
+      ],
+      swift:"El gráfico, un <code>Canvas</code> con un arco por cartera y <code>trim</code> sobre el círculo; es más barato que <code>Charts</code> para algo tan concreto. Los colores se guardan como tres números, no como <code>Color</code>, que no es codificable tal cual.",
+      warn:null
+    },
+    movimiento:{
+      n:"18", nav:"Finanzas · movimiento",
+      title:"Anotar movimiento",
+      intro:"La pantalla que más vas a usar de toda la app. Si tarda, dejas de apuntar, y unas cuentas a medio rellenar no sirven de nada.",
+      items:[
+        ["Gasto, ingreso o traspaso","Abre siempre en Gasto, que es lo que vas a hacer el noventa por ciento de las veces. El traspaso lo he añadido yo: en cuanto entra dinero y hay varias carteras, mover de Diario a Ahorro es inevitable, y sin ese tipo acabarías falseándolo con un gasto y un ingreso inventados que descuadran el total."],
+        ["Importe","Se abre con el teclado puesto y el cursor en la cifra. El signo lo pone el tipo de movimiento: tú nunca escribes un menos."],
+        ["Cartera","Chips en una fila, con la que más usas la primera. En Gasto es de dónde sale, en Ingreso es dónde entra y en Traspaso aparecen dos filas, de y a. La fila de secciones solo sale si esa cartera tiene secciones."],
+        ["Lo opcional, opcional","Concepto, fecha y foto del ticket se pueden saltar enteros. La fecha viene puesta en hoy."],
+        ["Tres toques","Escribir, tocar cartera, Guardar. Sigue siendo el objetivo aunque ahora haya tres tipos, porque Gasto ya viene elegido y el selector no cuesta un toque."]
+      ],
+      swift:"Hoja modal con <code>.presentationDetents</code> a media pantalla, para abrirla desde cualquier sitio sin perder lo que estabas mirando. Teclado numérico propio, no el del sistema, para controlar la coma decimal. Un traspaso se guarda como un solo registro con cartera de origen y destino, nunca como dos movimientos sueltos: así no se descuadra si borras uno.",
+      warn:null
+    },
+    cartera:{
+      n:"19", nav:"Finanzas · cartera",
+      title:"Dentro de una cartera",
+      intro:"En qué se divide la cartera y qué información llevas encima de ella.",
+      items:[
+        ["La cartera","Su aro y el saldo en grande, con lo que entra y lo que sale debajo, y la barra del tope de gasto del mes si le has puesto uno. El resumen de lo que vas a desglosar justo debajo."],
+        ["Secciones","Dos clases, y conviven. Etiqueta solo agrupa gastos dentro de la cartera, sin presupuesto ni aro: sirve para ordenar sin tener que inventarte un tope. Subcartera tiene tope propio y puede salir como aro en el gráfico. Se pasa de una a otra cuando quieras, sin perder los gastos que ya tenga."],
+        ["Bloques","Los mismos bloques apilados de costado, pero de esta cartera: media diaria, mayor gasto, días sin gastar, los que quieras."],
+        ["Movimientos","Todo lo de la cartera, lo último arriba: gastos en negativo, ingresos en verde y traspasos con una flecha, que no son ni lo uno ni lo otro. Deslizando a la izquierda se borra o se cambia de cartera."]
+      ],
+      swift:"Cartera y sección son el mismo modelo con un padre opcional: una subcartera es una cartera con padre. Eso te deja anidar sin escribir código nuevo.",
+      warn:null
+    },
+    aros:{
+      n:"20", nav:"Finanzas · aros",
+      title:"Configurar aros",
+      intro:"Qué aros se ven, en qué orden y de qué color.",
+      items:[
+        ["Vista previa","Arriba y viva: cambia al tocar cualquier opción. Configurar un gráfico a ciegas y tener que volver atrás para comprobarlo es insufrible."],
+        ["Qué aros","Total va siempre fuera. Los demás se encienden, se apagan y se reordenan arrastrando, y el orden de la lista es el orden de fuera hacia dentro."],
+        ["Color","Paleta corta de colores que se leen igual en claro y en oscuro. Un selector de millones de colores suena mejor de lo que acaba siendo: termina en un gráfico ilegible."],
+        ["Grosor","Fino, medio o grueso. Con muchos aros, fino; con dos o tres, grueso se ve mucho mejor."]
+      ],
+      swift:"Guarda el color como tres números y resuélvelo a color al dibujar, así la configuración se puede exportar y respaldar con el resto de los datos.",
+      warn:null
+    },
+    ajustes:{
+      n:"21", nav:"Ajustes",
+      title:"Ajustes",
+      intro:"Corto a propósito. Lo importante aquí es la entrada y los datos.",
+      items:[
+        ["Entrada","Face ID encendido o apagado, cambiar el trazo y cuándo se bloquea la app al salir."],
+        ["Grabar trazo nuevo","Se dibuja dos veces para confirmarlo. Si los dos trazos no se parecen entre sí, no se guarda."],
+        ["Datos","Copia cifrada en iCloud, exportar todo y apariencia. El trazo y Face ID nunca salen del iPhone, ni en la copia."]
+      ],
+      swift:"Copia con CloudKit sobre SwiftData. La exportación, un JSON con las imágenes aparte.",
+      warn:null
+    },
+    mapa:{
+      n:"—", nav:"Mapa de navegación",
+      title:"Mapa de navegación",
+      intro:"Cómo se conecta todo. Una sola puerta, un centro y nueve ramas; en verde, las pantallas con 3D, cámara o animación, que son las que cuestan trabajo de verdad.",
+      items:[
+        ["Una puerta","Acceso es la única entrada. Nada se carga antes de pasarla."],
+        ["Un centro","Desde Home se llega a cualquier sección en un toque, y desde cualquier sección se vuelve a Home en uno. Widgets cuelga del propio Home, porque solo sirve para configurarlo."],
+        ["Tres niveles como máximo","Home ▸ sección ▸ detalle. Las más profundas son Gimnasio (semana ▸ rutina ▸ ejercicio), Alimentación (estantería ▸ libro ▸ ficha) y Finanzas (aros ▸ cartera ▸ sección). Anotar un movimiento se salta el árbol entero: es una hoja que se abre desde donde estés."]
+      ],
+      swift:"Un <code>NavigationStack</code> por sección, con la ruta guardada para que al volver aparezcas donde estabas.",
+      warn:null
+    }
+  };
+
+  var order = [];
+  GROUPS.forEach(function(g){ g.items.forEach(function(k){ order.push(k); }); });
+
+  var idx = document.getElementById("idx");
+  var notes = document.getElementById("notes");
+  var device = document.getElementById("device");
+  var map = document.getElementById("map");
+  var spec = document.getElementById("spec");
+  var devsel = document.getElementById("devsel");
+  var current = "acceso";
+  var dev = DEVICES[0];
+
+  // índice
+  GROUPS.forEach(function(g){
+    var box = document.createElement("div");
+    box.className = "idx-group";
+    var h = document.createElement("span");
+    h.textContent = g.name;
+    box.appendChild(h);
+    g.items.forEach(function(k){
+      var b = document.createElement("button");
+      b.type = "button";
+      b.dataset.k = k;
+      b.innerHTML = '<span class="n">' + S[k].n + '</span><span>' + S[k].nav + '</span>';
+      b.addEventListener("click", function(){ show(k, true); });
+      box.appendChild(b);
+    });
+    idx.appendChild(box);
+  });
+
+  // selector de tamaño
+  DEVICES.forEach(function(d){
+    var b = document.createElement("button");
+    b.type = "button";
+    b.textContent = d.label;
+    b.dataset.id = d.id;
+    b.addEventListener("click", function(){ setDevice(d); });
+    devsel.appendChild(b);
+  });
+
+  function setDevice(d){
+    dev = d;
+    device.style.setProperty("--dw", d.w);
+    device.style.setProperty("--dh", d.h);
+    device.style.setProperty("--dr", d.r);
+    device.className = "device " + d.cut;
+    Array.prototype.forEach.call(devsel.children, function(b){
+      b.setAttribute("aria-pressed", b.dataset.id === d.id ? "true" : "false");
+    });
+    drawSpec();
+  }
+
+  function drawSpec(){
+    if (current === "mapa") {
+      spec.innerHTML = '<span>Estructura completa · 21 pantallas</span>';
+      return;
+    }
+    spec.innerHTML =
+      '<span><b>' + dev.w + ' × ' + dev.h + '</b> pt</span>' +
+      '<span>safe area <b>' + dev.top + '</b> arriba · <b>' + dev.bot + '</b> abajo</span>' +
+      '<span>radio <b>' + dev.r + '</b> pt</span>' +
+      '<span>' + (dev.cut === "notch" ? "notch" : "Dynamic Island") + '</span>';
+  }
+
+  function show(k, writeHash){
+    if (!S[k]) k = "acceso";
+    current = k;
+    var isMap = k === "mapa";
+    device.hidden = isMap;
+    map.hidden = !isMap;
+    devsel.parentNode.hidden = isMap;
+
+    Array.prototype.forEach.call(document.querySelectorAll(".sc"), function(el){
+      el.classList.toggle("on", el.id === "sc-" + k);
+    });
+    Array.prototype.forEach.call(idx.querySelectorAll("button"), function(b){
+      b.setAttribute("aria-current", b.dataset.k === k ? "true" : "false");
+    });
+
+    var d = S[k];
+    var html = '<div class="kicker">Molde ' + d.n + '</div><h2>' + d.title + '</h2>' +
+               '<p class="intro">' + d.intro + '</p><ul class="nlist">';
+    d.items.forEach(function(it, i){
+      html += '<li><i class="mk">' + (i + 1) + '</i><div><div class="t">' + it[0] + '</div><div class="s">' + it[1] + '</div></div></li>';
+    });
+    html += '</ul><div class="panel"><span class="lbl">En SwiftUI</span><p>' + d.swift + '</p></div>';
+    if (d.warn) html += '<div class="panel warn"><span class="lbl">Ojo</span><p>' + d.warn + '</p></div>';
+    notes.innerHTML = html;
+
+    var vp = document.getElementById("viewport");
+    if (vp) vp.scrollTop = 0;
+    if (writeHash) {
+      try { history.replaceState(null, "", "#" + k); } catch (e) { location.hash = k; }
+    }
+    drawSpec();
+  }
+
+  window.addEventListener("hashchange", function(){
+    var k = (location.hash || "").replace("#", "");
+    if (S[k] && k !== current) show(k, false);
+  });
+
+  setDevice(DEVICES[0]);
+  var start = (location.hash || "").replace("#", "");
+  show(S[start] ? start : "acceso", false);
+})();
+</script>
