@@ -151,10 +151,11 @@ public enum TreeCenterSchema {
             context.insert(WishBlock(kind: kind, order: index))
         }
 
-        // Inicio
+        // Inicio: el gimnasio ocupa la fila entera y comida y calendario van
+        // uno al lado del otro. Dos de 1×1 caben en una fila; un 2×1 no.
         context.insert(HomeWidget(section: .gym, design: "ring", size: .large, order: 0))
-        context.insert(HomeWidget(section: .food, design: "macros", size: .wide, order: 1))
-        context.insert(HomeWidget(section: .calendar, design: "next", size: .wide, order: 2))
+        context.insert(HomeWidget(section: .food, design: "macros", size: .small, order: 1))
+        context.insert(HomeWidget(section: .calendar, design: "next", size: .small, order: 2))
 
         try context.save()
     }
