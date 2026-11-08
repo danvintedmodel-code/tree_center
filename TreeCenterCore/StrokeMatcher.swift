@@ -64,7 +64,11 @@ public enum StrokeMatcher {
         let usable = raw.filter { $0.count >= 2 }
         guard !usable.isEmpty else { return nil }
 
-        var strokes = usable.map { resample($0, to: samplesPerStroke) }
+        // Suavizar antes de remuestrear. El temblor de la mano alarga el recorrido,
+        // y como el remuestreo reparte los puntos por longitud, ese alargamiento
+        // desplaza todos los puntos a la vez y hunde el parecido sin que la forma
+        // haya cambiado. Una media de tres puntos quita casi todo ese ruido.
+        var strokes = usable.map { resample(smoothed($0), to: samplesPerStroke) }
         let all = strokes.flatMap { $0 }
         guard !all.isEmpty else { return nil }
 
@@ -151,6 +155,18 @@ public enum StrokeMatcher {
         // El redondeo puede dejar el último punto fuera; se completa con el final real.
         while result.count < count, let last = points.last { result.append(last) }
         return Array(result.prefix(count))
+    }
+
+    /// Media móvil de tres puntos. Los extremos se dejan intactos: son los que
+    /// dicen por dónde empieza y acaba el trazo, y eso sí cuenta.
+    static func smoothed(_ points: [CGPoint]) -> [CGPoint] {
+        guard points.count > 2 else { return points }
+        var out = points
+        for i in 1..<(points.count - 1) {
+            out[i] = CGPoint(x: (points[i - 1].x + points[i].x + points[i + 1].x) / 3,
+                             y: (points[i - 1].y + points[i].y + points[i + 1].y) / 3)
+        }
+        return out
     }
 
     private static func pathLength(_ points: [CGPoint]) -> CGFloat {

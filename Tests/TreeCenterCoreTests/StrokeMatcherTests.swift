@@ -51,21 +51,27 @@ final class StrokeMatcherTests: XCTestCase {
         let original = try pattern([polyline(zedCorners)])
         let otraVez = try pattern([transform(polyline(zedCorners), scale: 2.4, dx: 57, dy: -31)])
 
-        XCTAssertGreaterThan(StrokeMatcher.score(otraVez, original), 0.95,
-                             "El tamaño y la posición no deberían contar")
+        let score = StrokeMatcher.score(otraVez, original)
+        print("[trazo] escalado y movido: \(score)")
+        XCTAssertGreaterThan(score, 0.95, "El tamaño y la posición no deberían contar")
         XCTAssertTrue(StrokeMatcher.matches(otraVez, template: original, tolerance: .strict))
     }
 
     func testTemblorPequenoSigueAbriendo() throws {
         let original = try pattern([polyline(zedCorners)])
 
-        // Un pulso humano: cada punto desplazado unos pocos puntos de pantalla.
+        // Un pulso humano es una ondulación lenta, no un diente de sierra: unos 3 pt
+        // de amplitud sobre un trazo de 100, con un periodo de medio centenar de
+        // muestras. Un zigzag en cada muestra no es temblor, es garabatear.
         var wobbly = polyline(zedCorners)
         for i in wobbly.indices {
-            let nudge = CGFloat((i % 5) - 2) * 1.6
-            wobbly[i] = CGPoint(x: wobbly[i].x + nudge, y: wobbly[i].y - nudge)
+            let wobble = CGFloat(sin(Double(i) / 9.0)) * 3
+            wobbly[i] = CGPoint(x: wobbly[i].x + wobble, y: wobbly[i].y - wobble)
         }
 
+        let score = StrokeMatcher.score(try pattern([wobbly]), original)
+        print("[trazo] con temblor: \(score)")
+        XCTAssertGreaterThan(score, 0.85, "El margen para un pulso normal es demasiado justo")
         XCTAssertTrue(StrokeMatcher.matches(try pattern([wobbly]),
                                             template: original,
                                             tolerance: .normal),
