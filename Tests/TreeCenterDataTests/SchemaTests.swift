@@ -9,10 +9,23 @@ import XCTest
 
 final class SchemaTests: XCTestCase {
 
+    private var storeURLs: [URL] = []
+
+    override func tearDown() {
+        for url in storeURLs { try? FileManager.default.removeItem(at: url) }
+        storeURLs = []
+        super.tearDown()
+    }
+
+    /// Un almacén nuevo, en disco, por prueba. En disco y no en memoria porque
+    /// varios modelos guardan imágenes con `.externalStorage`, y esas necesitan
+    /// una carpeta de verdad donde ir a parar.
     @MainActor
     private func freshContext() throws -> ModelContext {
-        let container = try TreeCenterSchema.container(inMemory: true)
-        return container.mainContext
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("tree-center-\(UUID().uuidString).store")
+        storeURLs.append(url)
+        return try TreeCenterSchema.container(at: url).mainContext
     }
 
     // MARK: - Que el esquema exista
@@ -77,18 +90,29 @@ final class SchemaTests: XCTestCase {
 
     @MainActor
     func testElTraspasoMueveSaldoPeroNoCuentaComoGasto() throws {
+        // Las trazas están puestas a propósito: si esto vuelve a caer en el CI,
+        // la última línea impresa dice en qué paso se rompió.
+        print("[datos] abriendo almacén")
         let context = try freshContext()
 
+        print("[datos] insertando carteras")
         let daily = Wallet(name: "Diario", monthlyCap: 500)
         let savings = Wallet(name: "Ahorro", color: .blue)
         context.insert(daily)
         context.insert(savings)
 
+        print("[datos] guardando carteras")
+        try context.save()
+
+        print("[datos] insertando movimientos")
         context.insert(Movement(amount: 1800, kind: .income, concept: "Nómina", wallet: daily))
         context.insert(Movement(amount: 12.40, kind: .expense, concept: "Metro", wallet: daily))
         context.insert(Movement(amount: 300, kind: .transfer, concept: "A Ahorro",
                                 wallet: daily, destination: savings))
+
+        print("[datos] guardando movimientos")
         try context.save()
+        print("[datos] guardado")
 
         let month = Calendar.current.monthInterval()
 

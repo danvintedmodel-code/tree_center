@@ -34,6 +34,15 @@ public enum TreeCenterSchema {
         return try ModelContainer(for: schema, configurations: [configuration])
     }
 
+    /// Un almacén en un archivo concreto. Lo usan las pruebas: varios modelos
+    /// guardan imágenes fuera de la base con `.externalStorage`, y eso necesita
+    /// un sitio de verdad donde escribirlas.
+    public static func container(at url: URL) throws -> ModelContainer {
+        let schema = Schema(models)
+        let configuration = ModelConfiguration(schema: schema, url: url)
+        return try ModelContainer(for: schema, configurations: [configuration])
+    }
+
     // MARK: - Primer arranque
 
     /// Lo mínimo para que la app no se abra vacía: la semana, las tres carteras
