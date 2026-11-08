@@ -38,10 +38,47 @@ public enum TreeCenterSchema {
     /// guardan imágenes fuera de la base con `.externalStorage`, y eso necesita
     /// un sitio de verdad donde escribirlas.
     public static func container(at url: URL) throws -> ModelContainer {
-        let schema = Schema(models)
+        try container(models: models, at: url)
+    }
+
+    /// Un almacén con solo una parte de los modelos.
+    ///
+    /// Existe para poder aislar grupos en las pruebas: cuando el esquema entero
+    /// revienta al guardar, abrirlo por trozos es la única forma rápida de saber
+    /// qué trozo lo rompe. En la app siempre se usa el esquema completo.
+    public static func container(models subset: [any PersistentModel.Type],
+                                 at url: URL) throws -> ModelContainer {
+        let schema = Schema(subset)
         let configuration = ModelConfiguration(schema: schema, url: url)
         return try ModelContainer(for: schema, configurations: [configuration])
     }
+
+    // Los grupos, tal y como están repartidos por archivos.
+    public static let fitnessModels: [any PersistentModel.Type] = [
+        Exercise.self, WorkoutTemplate.self, PlannedExercise.self,
+        RoutineDay.self, Routine.self, Workout.self, SetEntry.self, BodyMeasurement.self
+    ]
+
+    public static let foodModels: [any PersistentModel.Type] = [
+        RecipeBook.self, Chapter.self, Recipe.self, Ingredient.self,
+        MealEntry.self, NutritionGoal.self
+    ]
+
+    public static let wardrobeModels: [any PersistentModel.Type] = [
+        Garment.self, Outfit.self
+    ]
+
+    public static let financeModels: [any PersistentModel.Type] = [
+        Wallet.self, WalletSection.self, Movement.self, FinanceSettings.self
+    ]
+
+    public static let lifeModels: [any PersistentModel.Type] = [
+        ImportantDate.self, Project.self, ProjectTask.self, DecisionNote.self,
+        Course.self, Topic.self, StudyNote.self,
+        Book.self, Highlight.self,
+        WishBlock.self, WishItem.self, Place.self,
+        HomeWidget.self
+    ]
 
     // MARK: - Primer arranque
 
