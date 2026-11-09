@@ -10,7 +10,7 @@ import TreeCenterData
 
 struct GarmentEditor: View {
     /// Nil para una prenda nueva.
-    var garment: Garment?
+    var garment: Garment? = nil
     var startIn: GarmentCategory = .hoodies
 
     @Environment(\.dismiss) private var dismiss

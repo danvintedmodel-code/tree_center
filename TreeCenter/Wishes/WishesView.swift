@@ -284,7 +284,7 @@ struct WishBlockView: View {
 /// la foto va arriba y el nombre debajo, y no al revés.
 private struct WishItemEditor: View {
     let block: WishBlock
-    var item: WishItem?
+    var item: WishItem? = nil
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
