@@ -15,18 +15,23 @@ concurrency:
 jobs:
   ios:
     name: iOS
-    # Sonoma a proposito y no macos-latest: es la imagen que todavia trae
-    # Xcode 15, y Xcode 15 es lo que hay en el Mac de desarrollo.
-    runs-on: macos-14
+    # macos-14 se intento (para tener Xcode 15, el del Mac de desarrollo) y la
+    # etiqueta ya no existe: el job se cancelo en un segundo sin asignar maquina.
+    # Asi que la imagen de serie, y el Xcode 15 solo si resulta que lo trae.
+    runs-on: macos-latest
 
     steps:
       - uses: actions/checkout@v4
 
       # El Mac de desarrollo es un MacBook Pro de 2017 con Ventura 13.7, y ahi el
-      # Xcode mas nuevo que entra es el 15.2. Si el CI compilara con el 16 o el 26,
-      # un verde aqui no prometeria nada alli: cualquier cosa que su Xcode no
-      # conozca pasaria el CI y fallaria en su mesa. Asi que se compila con un
-      # Xcode 15, lo mas cerca posible del suyo.
+      # Xcode mas nuevo que entra es el 15.2. Lo ideal seria compilar con ese
+      # mismo, y si la imagen lo trae se usa.
+      #
+      # Si no lo trae, el riesgo real es menor de lo que parece: `Package.swift`
+      # declara `.iOS(.v17)`, asi que usar una API posterior a iOS 17.0 sin
+      # `if #available` no compila ni con el Xcode mas nuevo. Lo que un Xcode
+      # nuevo no puede cazar es sintaxis de Swift posterior a la 5.9, y eso se
+      # vigila a mano.
       - name: Usar un Xcode 15
         run: |
           ls -d /Applications/Xcode*.app || true
