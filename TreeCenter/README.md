@@ -105,6 +105,40 @@ contraseña y se ha convertido en un gesto cualquiera.
    **La cámara no existe en el simulador**: el botón no se dibuja allí (lo decide
    `CameraPicker.isAvailable`), así que para probarla hace falta el iPhone de verdad.
    La galería sí funciona, con las fotos de muestra que trae el simulador.
+7. iCloud es aparte y es opcional: no hace falta para que la app funcione. Los dos
+   pasos están en *Copia, exportación e iCloud*, más abajo.
+
+### Qué pasa en el primer arranque
+
+En este orden, para que nada te parezca un fallo cuando no lo es:
+
+1. Te pide **dibujar el trazo**, y repetirlo. **No se dibuja nada en pantalla**: es lo
+   buscado, no es que no responda.
+2. Entra en el inicio y se siembra el armazón mínimo: la semana de gimnasio con tres
+   sesiones de ejemplo, tres carteras y los tres widgets. Nada más.
+3. **El resto de las pantallas están vacías**, con su estado vacío puesto a propósito.
+   El armario sin prendas, la biblioteca sin libros, Viajes sin lugares. No está roto:
+   no hay nada tuyo dentro todavía.
+
+## Si algo falla en el primer arranque
+
+| Lo que ves | Qué es | Qué hacer |
+|---|---|---|
+| La app se cierra justo al entrar con Face ID | Falta `NSFaceIDUsageDescription` | Paso 4. Es el fallo más probable de todos |
+| Se cierra al pulsar el botón de la cámara | Falta `NSCameraUsageDescription` | Paso 5 |
+| `No such module 'TreeCenterKit'` | El paquete no está añadido al target, o se añadió otro producto | Paso 2: tiene que ser **TreeCenterKit** |
+| `'main' attribute can only apply to one type` | Quedan dos `@main` | Paso 3: borra el `TreeCenterApp.swift` que generó Xcode |
+| Aviso naranja arriba: «Los datos de esta sesión no se están guardando» | El almacén de disco no ha abierto. Casi siempre: **cambiaste un `@Model`** y el almacén que ya había no cuadra con el esquema nuevo | Borra la app del simulador (o del iPhone) y vuelve a ejecutar. Mientras el modelo siga moviéndose, esto va a pasar, y no hay migración escrita todavía |
+| Aviso arena: «iCloud no ha podido abrirse» | El entitlement de CloudKit no está puesto | Es lo esperado. O lo pones, o apagas el interruptor en Ajustes |
+| Las letras parecen las del sistema | Instrument Sans no está instalada | *Las fuentes*, más abajo. No rompe nada, está previsto |
+| «Ese archivo no es una copia de Tree Center» al restaurar | Elegiste el CSV y no el `.aar` | El `.aar` es la copia; el CSV es solo para leer |
+
+La fila del aviso naranja es la que más veces te vas a encontrar mientras la app esté
+creciendo: **cualquier cambio en un `@Model` invalida el almacén que ya tienes**. Borrar
+la app es la respuesta correcta durante el desarrollo. Cuando haya datos de verdad
+dentro, eso dejará de valer y habrá que escribir un `VersionedSchema` con su
+`MigrationPlan`: hoy no existe ninguno, y es trabajo pendiente del día en que la app
+tenga algo que perder.
 
 ## Las fuentes
 
@@ -181,6 +215,9 @@ se cayera seis veces seguidas por el modelo de datos.
 - Los iconos propios de línea. El inicio usa SF Symbols de momento; se cambian en
   `symbol(for:)` y `HomeTab.symbol` cuando el set esté dibujado.
 - El mapa de los lugares de Viajes (MapKit).
+- **Las migraciones.** No hay `VersionedSchema` ni `MigrationPlan`: hoy, cambiar un
+  `@Model` obliga a borrar la app. Vale mientras dentro no haya nada tuyo; deja de valer
+  el día que lo haya.
 - **Nada de esto se ha ejecutado nunca en un simulador.** Todo lo que hay compila en el
   CI; que compile y que funcione no son lo mismo.
 
