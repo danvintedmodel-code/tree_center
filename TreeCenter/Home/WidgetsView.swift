@@ -15,6 +15,14 @@ struct WidgetsView: View {
 
     @State private var selected: PersistentIdentifier?
 
+    /// Alto fijo de fila: es lo que hace que el cálculo del destino al arrastrar
+    /// sea exacto en vez de una estimación.
+    private static let rowHeight: CGFloat = 46
+
+    @State private var dragging: PersistentIdentifier?
+    @State private var dragFrom = 0
+    @State private var dragOffset: CGFloat = 0
+
     var body: some View {
         VStack(spacing: 0) {
             TCScreenHeader(title: "Widgets", back: { dismiss() }) {
@@ -61,7 +69,19 @@ struct WidgetsView: View {
                 VStack(spacing: 0) {
                     ForEach(Array(widgets.enumerated()), id: \.element.persistentModelID) { index, widget in
                         row(widget, at: index)
-                        if index < widgets.count - 1 { Divider().overlay(TCColor.line) }
+                            // La fila que se arrastra va por encima de las demás
+                            // y con sombra, para que se vea que está en el aire.
+                            .offset(y: lift(index))
+                            .background(dragging == widget.persistentModelID ? TCColor.card : Color.clear)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .shadow(color: dragging == widget.persistentModelID
+                                    ? Color.black.opacity(0.35) : .clear,
+                                    radius: 13, y: 6)
+                            .zIndex(dragging == widget.persistentModelID ? 1 : 0)
+
+                        if index < widgets.count - 1 && dragging == nil {
+                            Divider().overlay(TCColor.line)
+                        }
                     }
                 }
                 .tcCard(padding: 14)
@@ -69,25 +89,18 @@ struct WidgetsView: View {
         }
     }
 
+    /// Cuánto se desplaza cada fila mientras se arrastra: la que llevas, con el
+    /// dedo; las demás, quietas, porque el hueco ya se ha movido en la lista.
+    private func lift(_ index: Int) -> CGFloat {
+        guard let dragging,
+              let current = widgets.firstIndex(where: { $0.persistentModelID == dragging }),
+              current == index else { return 0 }
+        return dragOffset - CGFloat(current - dragFrom) * Self.rowHeight
+    }
+
     private func row(_ widget: HomeWidget, at index: Int) -> some View {
         HStack(spacing: 10) {
-            Button { move(index, by: -1) } label: {
-                Image(systemName: "chevron.up")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(index == 0 ? TCColor.textFaint : TCColor.textSoft)
-            }
-            .buttonStyle(.plain)
-            .disabled(index == 0)
-            .accessibilityLabel("Subir")
-
-            Button { move(index, by: 1) } label: {
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(index == widgets.count - 1 ? TCColor.textFaint : TCColor.textSoft)
-            }
-            .buttonStyle(.plain)
-            .disabled(index == widgets.count - 1)
-            .accessibilityLabel("Bajar")
+            grip(for: widget, at: index)
 
             Button { selected = widget.persistentModelID } label: {
                 HStack(spacing: 8) {
@@ -115,7 +128,64 @@ struct WidgetsView: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Quitar")
         }
-        .padding(.vertical, 12)
+        .frame(height: Self.rowHeight)
+    }
+
+    /// Las rayas de arrastre.
+    ///
+    /// Dibujadas a mano y con su propio gesto, y no con `List` + `.onMove`, que
+    /// sería una línea. El motivo: las asas del sistema solo aparecen con el
+    /// `editMode` activo, y en modo edición una fila de `List` se deja de poder
+    /// tocar — se quedarían sin funcionar el toque que elige el widget y la X
+    /// que lo quita. Además el asa gris del sistema no pega con un dibujo de
+    /// líneas de 1,4 px. Por eso tres rectángulos y un `DragGesture`.
+    private func grip(for widget: HomeWidget, at index: Int) -> some View {
+        VStack(spacing: 4) {
+            ForEach(0..<3, id: \.self) { _ in
+                RoundedRectangle(cornerRadius: 1, style: .continuous)
+                    .fill(dragging == widget.persistentModelID ? TCColor.moss : TCColor.textFaint)
+                    .frame(height: 1.4)
+            }
+        }
+        .frame(width: 16)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 10)
+        .contentShape(Rectangle())
+        .accessibilityLabel("Cambiar de posición")
+        .gesture(
+            DragGesture(minimumDistance: 2)
+                .onChanged { value in
+                    if dragging == nil {
+                        dragging = widget.persistentModelID
+                        dragFrom = index
+                    }
+                    dragOffset = value.translation.height
+                    reorderWhileDragging()
+                }
+                .onEnded { _ in
+                    // El orden ya se fue aplicando durante el arrastre, así que
+                    // aquí solo queda guardarlo y soltar.
+                    dragging = nil
+                    dragOffset = 0
+                    try? context.save()
+                }
+        )
+    }
+
+    /// El destino se calcula siempre desde la posición donde empezó el arrastre,
+    /// que no cambia: así el cálculo no se va acumulando error a cada paso.
+    private func reorderWhileDragging() {
+        guard let dragging,
+              let current = widgets.firstIndex(where: { $0.persistentModelID == dragging }) else { return }
+
+        let steps = Int((dragOffset / Self.rowHeight).rounded())
+        let target = min(max(dragFrom + steps, 0), widgets.count - 1)
+        guard target != current else { return }
+
+        var list = widgets
+        let moved = list.remove(at: current)
+        list.insert(moved, at: target)
+        for (position, widget) in list.enumerated() { widget.order = position }
     }
 
     private func label(of widget: HomeWidget) -> String {
@@ -220,15 +290,6 @@ struct WidgetsView: View {
     }
 
     // MARK: - Acciones
-
-    private func move(_ index: Int, by delta: Int) {
-        let target = index + delta
-        guard widgets.indices.contains(target) else { return }
-        var list = widgets
-        list.swapAt(index, target)
-        for (position, widget) in list.enumerated() { widget.order = position }
-        try? context.save()
-    }
 
     private func remove(_ widget: HomeWidget) {
         if widget.persistentModelID == selected { selected = nil }
