@@ -172,14 +172,7 @@ struct RecipeBookView: View {
 
     private func recipeRow(_ recipe: Recipe) -> some View {
         HStack(spacing: 11) {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(TCColor.well)
-                .frame(width: 42, height: 42)
-                .overlay(
-                    Image(systemName: "fork.knife")
-                        .font(.system(size: 16, weight: .light))
-                        .foregroundStyle(TCColor.textFaint)
-                )
+            PhotoThumb(data: recipe.image, side: 42, radius: 12, symbol: "fork.knife")
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(recipe.name)

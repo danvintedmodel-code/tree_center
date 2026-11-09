@@ -181,8 +181,7 @@ struct WishBlockView: View {
     @Environment(\.modelContext) private var context
 
     @State private var adding = false
-    @State private var name = ""
-    @State private var price = ""
+    @State private var editing: WishItem?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -219,7 +218,8 @@ struct WishBlockView: View {
                     } else {
                         VStack(spacing: 0) {
                             ForEach(Array(items.enumerated()), id: \.element.persistentModelID) { index, item in
-                                HStack {
+                                HStack(spacing: 11) {
+                                    PhotoThumb(data: item.image, side: 34, symbol: "photo")
                                     Text(item.name).font(TCFont.font(14)).foregroundStyle(TCColor.text)
                                     Spacer(minLength: 8)
                                     if let cents = item.priceCents {
@@ -229,8 +229,11 @@ struct WishBlockView: View {
                                             .foregroundStyle(TCColor.textSoft)
                                     }
                                 }
-                                .padding(.vertical, 12)
+                                .padding(.vertical, 10)
+                                .contentShape(Rectangle())
+                                .onTapGesture { editing = item }
                                 .contextMenu {
+                                    Button("Editar") { editing = item }
                                     Button("Borrar", role: .destructive) {
                                         context.delete(item)
                                         try? context.save()
@@ -256,12 +259,11 @@ struct WishBlockView: View {
         }
         .background(TCColor.bg)
         .toolbar(.hidden, for: .navigationBar)
-        .alert("Nuevo capricho", isPresented: $adding) {
-            TextField("Qué es", text: $name)
-            TextField("Precio en euros (opcional)", text: $price)
-                .keyboardType(.decimalPad)
-            Button("Cancelar", role: .cancel) { name = ""; price = "" }
-            Button("Guardar") { add() }
+        .sheet(isPresented: $adding) {
+            WishItemEditor(block: block)
+        }
+        .sheet(item: $editing) { item in
+            WishItemEditor(block: block, item: item)
         }
     }
 
@@ -274,16 +276,126 @@ struct WishBlockView: View {
         return known.isEmpty ? nil : known.reduce(0, +)
     }
 
-    private func add() {
+}
+
+// MARK: - Un capricho
+
+/// Un capricho es casi siempre una foto que has visto en algún sitio, así que
+/// la foto va arriba y el nombre debajo, y no al revés.
+private struct WishItemEditor: View {
+    let block: WishBlock
+    var item: WishItem?
+
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var context
+
+    @State private var name = ""
+    @State private var price = ""
+    @State private var link = ""
+    @State private var notes = ""
+    @State private var image: Data?
+    @State private var loaded = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Button("Cancelar") { dismiss() }
+                    .font(TCFont.font(14)).foregroundStyle(TCColor.textSoft)
+                Spacer()
+                Text(item == nil ? "Nuevo capricho" : "Capricho")
+                    .font(TCFont.font(14, .semibold)).foregroundStyle(TCColor.text)
+                Spacer()
+                Button("Guardar") { save() }
+                    .font(TCFont.font(14, .semibold))
+                    .foregroundStyle(canSave ? TCColor.moss : TCColor.textFaint)
+                    .disabled(!canSave)
+            }
+            .padding(.horizontal, TCSpace.gutter)
+            .padding(.vertical, 16)
+            .background(TCColor.cardSunken)
+
+            ScrollView {
+                VStack(spacing: 15) {
+                    PhotoWell(data: $image,
+                              height: 210,
+                              symbol: "sparkles",
+                              hint: "La foto de lo que te ha gustado")
+
+                    field("Qué es", text: $name, placeholder: "Zapatillas verdes")
+                    field("Precio", text: $price, placeholder: "89", numeric: true)
+                    field("Enlace", text: $link, placeholder: "donde lo viste")
+
+                    VStack(alignment: .leading, spacing: 9) {
+                        TCSectionLabel(text: "Notas")
+                        TextField("La talla, el color, lo que sea", text: $notes, axis: .vertical)
+                            .font(TCFont.font(13))
+                            .foregroundStyle(TCColor.text)
+                            .lineLimit(3...8)
+                            .tcCard(padding: 14, radius: TCRadius.control)
+                    }
+                }
+                .padding(.horizontal, TCSpace.gutter)
+                .padding(.vertical, 18)
+            }
+            .scrollIndicators(.hidden)
+        }
+        .background(TCColor.bg)
+        .onAppear(perform: fill)
+    }
+
+    private func field(_ label: String, text: Binding<String>,
+                       placeholder: String, numeric: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 9) {
+            TCSectionLabel(text: label)
+            TextField(placeholder, text: text)
+                .keyboardType(numeric ? .decimalPad : .default)
+                .font(TCFont.font(15))
+                .foregroundStyle(TCColor.text)
+                .tcCard(padding: 14, radius: TCRadius.control)
+        }
+    }
+
+    private var canSave: Bool {
+        !name.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    /// Igual que en el armario: `onAppear` vuelve a dispararse al cerrar la
+    /// cámara, y sin esta guarda la foto recién hecha se perdería.
+    private func fill() {
+        guard !loaded, let item else { loaded = true; return }
+        loaded = true
+        name = item.name
+        price = item.priceCents.map { Cents.decimal($0).formatted(.number.precision(.fractionLength(0...2))) } ?? ""
+        link = item.link
+        notes = item.notes
+        image = item.image
+    }
+
+    private func save() {
         let title = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let euros = Decimal(string: price.replacingOccurrences(of: ",", with: "."))
-        name = ""
-        price = ""
         guard !title.isEmpty else { return }
 
-        let item = WishItem(name: title, priceCents: euros.map(Cents.from))
-        context.insert(item)
-        item.block = block
+        let euros = Decimal(string: price.replacingOccurrences(of: ",", with: "."))
+        let cents = euros.map(Cents.from)
+
+        if let item {
+            item.name = title
+            item.priceCents = cents
+            item.link = link.trimmingCharacters(in: .whitespaces)
+            item.notes = notes
+            item.image = image
+        } else {
+            let new = WishItem(name: title, priceCents: cents,
+                               link: link.trimmingCharacters(in: .whitespaces))
+            new.notes = notes
+            new.image = image
+            context.insert(new)
+            // Después de insertar: enlazar un objeto que el contexto no conoce
+            // todavía es la forma de que la relación no se guarde.
+            new.block = block
+        }
+
         try? context.save()
+        dismiss()
     }
 }

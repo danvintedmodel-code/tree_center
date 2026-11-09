@@ -25,6 +25,7 @@ struct MovementEditorView: View {
     @State private var sectionID: PersistentIdentifier?
     @State private var concept = ""
     @State private var date = Date()
+    @State private var receipt: Data?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -39,6 +40,12 @@ struct MovementEditorView: View {
                     if kind == .transfer { destinationSection }
                     if !sections.isEmpty && kind != .transfer { sectionChips }
                     detailRow.padding(.top, 16)
+                    // Solo en los gastos: a un ingreso o a un traspaso entre
+                    // carteras propias no se le hace una foto del ticket.
+                    if kind == .expense {
+                        PhotoRow(data: $receipt, title: "Recibo")
+                            .padding(.top, 10)
+                    }
                 }
                 .padding(.horizontal, TCSpace.gutter)
             }
@@ -285,6 +292,7 @@ struct MovementEditorView: View {
         )
 
         guard movement.isValid else { return }
+        movement.receipt = kind == .expense ? receipt : nil
         context.insert(movement)
         try? context.save()
         dismiss()

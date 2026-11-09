@@ -89,8 +89,22 @@ contraseña y se ha convertido en un gesto cualquiera.
    `Para entrar en Tree Center sin dibujar el trazo.`
    **Sin esa clave iOS mata la app** en el momento de pedir Face ID, sin error claro.
    Es el fallo más tonto y el que más tiempo se come.
-5. Ejecuta. En el simulador, Face ID se simula desde
+5. En el mismo sitio, añade las otras dos claves de permiso. Son del mismo tipo que la
+   de Face ID: sin ellas la app **se cierra** al abrir la cámara o la galería.
+
+   | Clave | Qué poner |
+   |---|---|
+   | `Privacy - Camera Usage Description`<br>(`NSCameraUsageDescription`) | `Para hacerle una foto al plato, a la prenda o al recibo.` |
+   | `Privacy - Photo Library Usage Description`<br>(`NSPhotoLibraryUsageDescription`) | `Para elegir fotos de recetas, prendas, caprichos y lugares.` |
+
+   La de la galería es por si acaso: `PhotosPicker` corre fuera de la app y en teoría
+   no la necesita, pero cuesta nada y evita un cierre si algún día se cambia por el
+   selector antiguo.
+6. Ejecuta. En el simulador, Face ID se simula desde
    *Features → Face ID → Enrolled* y luego *Matching Face*.
+   **La cámara no existe en el simulador**: el botón no se dibuja allí (lo decide
+   `CameraPicker.isAvailable`), así que para probarla hace falta el iPhone de verdad.
+   La galería sí funciona, con las fotos de muestra que trae el simulador.
 
 ## Las fuentes
 

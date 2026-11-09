@@ -248,6 +248,15 @@ struct WalletView: View {
                 Text(caption(movement, incoming: incoming)).tcMicro()
             }
             Spacer(minLength: 8)
+
+            // Un clip pequeño y nada más: que se vea que el gasto tiene recibo
+            // sin que el ticket ocupe la fila.
+            if movement.receipt != nil {
+                Image(systemName: "paperclip")
+                    .font(.system(size: 11, weight: .light))
+                    .foregroundStyle(TCColor.textFaint)
+            }
+
             Text(figure(movement, incoming: incoming))
                 .font(TCFont.font(14, .semibold))
                 .monospacedDigit()

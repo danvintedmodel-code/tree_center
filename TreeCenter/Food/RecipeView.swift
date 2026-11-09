@@ -6,7 +6,7 @@ import TreeCenterData
 // has comido esto tiene que costar un toque desde aquí.
 
 struct RecipeView: View {
-    let recipe: Recipe
+    @Bindable var recipe: Recipe
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
@@ -51,55 +51,14 @@ struct RecipeView: View {
 
     // MARK: - Imagen
 
+    /// `.fit` y no `.fill`: muchas fotos de recetas vienen con el fondo
+    /// recortado y recortarlas otra vez se come el plato.
     private var imageCard: some View {
-        ZStack(alignment: .topLeading) {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(TCColor.cardSunken)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .stroke(TCColor.line, lineWidth: 1)
-                )
-
-            Text("PNG · FONDO RECORTADO")
-                .tcLabel()
-                .padding(16)
-
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    Image(systemName: "fork.knife")
-                        .font(.system(size: 40, weight: .ultraLight))
-                        .foregroundStyle(TCColor.textFaint)
-                    Spacer()
-                }
-                Spacer()
-            }
-
-            VStack {
-                Spacer()
-                HStack(spacing: 8) {
-                    Spacer()
-                    roundButton("camera", label: "Hacer foto")
-                    roundButton("photo", label: "Elegir de la galería")
-                }
-                .padding(14)
-            }
-        }
-        .frame(height: 220)
-    }
-
-    private func roundButton(_ symbol: String, label: String) -> some View {
-        Button {} label: {
-            Image(systemName: symbol)
-                .font(.system(size: 16, weight: .light))
-                .foregroundStyle(TCColor.text)
-                .frame(width: 40, height: 40)
-                .background(TCColor.bg)
-                .clipShape(Circle())
-                .overlay(Circle().stroke(TCColor.lineStrong, lineWidth: 1))
-        }
-        .accessibilityLabel(label)
+        PhotoWell(data: $recipe.image,
+                  height: 220,
+                  symbol: "fork.knife",
+                  hint: "Hazle una foto al plato",
+                  mode: .fit)
     }
 
     // MARK: - Macros

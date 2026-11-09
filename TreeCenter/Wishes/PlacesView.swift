@@ -1,6 +1,7 @@
 import SwiftData
 import SwiftUI
 import TreeCenterData
+import UIKit
 
 // Viajes. Una tarjeta por lugar, el nombre en medio y el dibujo de fondo
 // disolviéndose por los cuatro lados.
@@ -97,8 +98,10 @@ private struct PlaceCard: View {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(TCColor.cardSunken)
 
-            LineArt(canvas: art.canvas, color: TCColor.textSoft, lineWidth: 1.3, draw: art.drawing)
-                .padding(.horizontal, -20)
+            // La foto, si la hay, entra por donde entraba el dibujo y con la
+            // misma máscara: se difumina por los cuatro lados igual, así que la
+            // tarjeta no cambia de carácter al ponerle una.
+            backdrop
                 .mask(
                     EllipticalGradient(
                         stops: [.init(color: .black, location: 0.38),
@@ -140,6 +143,23 @@ private struct PlaceCard: View {
         )
     }
 
+    @ViewBuilder
+    private var backdrop: some View {
+        if let data = place.image, let image = UIImage(data: data) {
+            Image(uiImage: image)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
+                // Oscurecida: el nombre va encima y con la foto a plena luz no
+                // se lee por mucha sombra que lleve el texto.
+                .overlay(TCColor.bg.opacity(0.42))
+        } else {
+            LineArt(canvas: art.canvas, color: TCColor.textSoft, lineWidth: 1.3, draw: art.drawing)
+                .padding(.horizontal, -20)
+        }
+    }
+
     private var art: PlaceArt { PlaceArt.forName(place.name) }
 
     private var footnote: String {
@@ -174,6 +194,15 @@ private struct PlaceView: View {
                 VStack(spacing: 16) {
                     PlaceCard(place: place)
 
+                    VStack(alignment: .leading, spacing: 9) {
+                        TCSectionLabel(text: "Foto del sitio")
+                        PhotoWell(data: $place.image,
+                                  height: 168,
+                                  radius: 20,
+                                  symbol: "mountain.2",
+                                  hint: "La foto sale detrás del nombre")
+                    }
+
                     field("Cuándo", text: $place.whenNote, placeholder: "primavera 2027")
 
                     VStack(alignment: .leading, spacing: 9) {
@@ -198,7 +227,7 @@ private struct PlaceView: View {
                             .tcCard(padding: 14, radius: TCRadius.control)
                     }
 
-                    Text("El mapa y la galería del sitio llegan cuando entren las imágenes.")
+                    Text("El mapa del sitio llega cuando entre MapKit.")
                         .tcMicro()
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }

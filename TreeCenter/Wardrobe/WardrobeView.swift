@@ -1,6 +1,7 @@
 import SwiftData
 import SwiftUI
 import TreeCenterData
+import UIKit
 
 // Armario. Rail de categorías a la izquierda, maniquí en medio, prendas de la
 // categoría activa abajo.
@@ -18,7 +19,7 @@ struct WardrobeView: View {
 
     @State private var category: GarmentCategory = .hoodies
     @State private var adding = false
-    @State private var newName = ""
+    @State private var editing: Garment?
     @State private var savingOutfit = false
     @State private var outfitName = ""
 
@@ -52,12 +53,11 @@ struct WardrobeView: View {
         }
         .background(TCColor.bg)
         .toolbar(.hidden, for: .navigationBar)
-        .alert("Nueva prenda", isPresented: $adding) {
-            TextField("Sudadera verde", text: $newName)
-            Button("Cancelar", role: .cancel) { newName = "" }
-            Button("Guardar") { addGarment() }
-        } message: {
-            Text("Se añade a \(category.label.lowercased()).")
+        .sheet(isPresented: $adding) {
+            GarmentEditor(startIn: category)
+        }
+        .sheet(item: $editing) { garment in
+            GarmentEditor(garment: garment)
         }
         .alert("Guardar conjunto", isPresented: $savingOutfit) {
             TextField("Diario", text: $outfitName)
@@ -177,6 +177,7 @@ struct WardrobeView: View {
                         }
                         .buttonStyle(.plain)
                         .contextMenu {
+                            Button("Editar") { editing = garment }
                             Button("Borrar", role: .destructive) {
                                 context.delete(garment)
                                 try? context.save()
@@ -212,7 +213,17 @@ struct WardrobeView: View {
                               lineWidth: garment.isWorn ? 1.5 : 1)
 
             VStack(spacing: 6) {
-                garment.category.icon(garment.isWorn ? TCColor.moss : TCColor.textSoft, size: 28)
+                // La foto manda sobre el icono: una tira de prendas con sus PNG
+                // se lee de un vistazo y siete iconos iguales no.
+                if let data = garment.image, let image = UIImage(data: data) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 40, height: 40)
+                } else {
+                    garment.category.icon(garment.isWorn ? TCColor.moss : TCColor.textSoft, size: 28)
+                        .frame(height: 40)
+                }
                 Text(garment.name)
                     .font(TCFont.font(8.5))
                     .foregroundStyle(TCColor.textMicro)
@@ -295,15 +306,4 @@ struct WardrobeView: View {
         try? context.save()
     }
 
-    private func addGarment() {
-        let name = newName.trimmingCharacters(in: .whitespacesAndNewlines)
-        newName = ""
-        guard !name.isEmpty else { return }
-
-        let palette = PaletteColor.allCases
-        context.insert(Garment(name: name,
-                               category: category,
-                               color: palette[garments.count % palette.count]))
-        try? context.save()
-    }
 }
