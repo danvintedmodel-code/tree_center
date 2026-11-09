@@ -131,13 +131,58 @@ lo dibujas, lo repites, y entra. A partir de ahí te lo pide al abrir.
 - Tres fallos y 30 s de espera. En `LockController`.
 - Para empezar de cero: `LockController.resetPattern()`, o borra la app.
 
+## Copia, exportación e iCloud
+
+Está en **Ajustes → Datos**. Tres cosas distintas que conviene no confundir:
+
+**Guardar una copia.** Escribe un `.aar` con los cuatro trozos del almacén (la base, el
+`-wal`, el `-shm` y la carpeta de las fotos) y lo pasa a la hoja de compartir. Es `.aar`
+de Apple Archive y no un `.zip` por un motivo concreto: **Foundation sabe hacer un zip
+pero no sabe deshacerlo**, no hay API pública para descomprimir en iOS, así que una copia
+en zip no se podría restaurar sin una dependencia de terceros. En el Mac se abre con:
+
+```
+aa extract -i TreeCenter-copia-2026-11-09.aar -d carpeta
+```
+
+**Exportar los gastos.** Un CSV de los movimientos, con punto decimal y BOM de UTF-8
+para que Excel en Windows no se coma los acentos. Esto es lo que se quiere de verdad
+cuando se dice «exportar»: algo que se abre y se lee.
+
+**Restaurar una copia.** Eliges el `.aar`, se descomprime en
+`Application Support/restauracion-pendiente/`, se comprueba que dentro hay un
+`TreeCenter.store` de verdad… y ahí se queda. **La restauración se aplica en el siguiente
+arranque**, no al pedirla: `StoreFiles.applyPendingRestore()` corre en `RootView.init`
+antes de que exista el `ModelContainer`. Sustituir los archivos de una base abierta no da
+un error, da una base a medias, que es mucho peor.
+
+**iCloud.** El interruptor guarda una preferencia y se aplica al reiniciar, porque el
+contenedor se monta una sola vez en el arranque. Para que funcione hace falta, en Xcode:
+
+1. Target → **Signing & Capabilities → + Capability → iCloud**, con **CloudKit** marcado
+   y un contenedor (`iCloud.lo-que-sea.TreeCenter`).
+2. **+ Capability → Background Modes → Remote notifications**, que es lo que despierta la
+   app cuando otro dispositivo cambia algo.
+
+Sin eso, encender el interruptor no rompe nada: el contenedor de iCloud no abre, la app
+cae al almacén local y sale un aviso en el inicio diciéndolo.
+
+El modelo ya cumple lo que CloudKit exige, y está comprobado campo a campo: ningún
+atributo sin valor por defecto, ninguna relación a-uno obligatoria, ningún `.unique` y
+todas las inversas declaradas a mano. No es suerte: es lo que quedó después de que el CI
+se cayera seis veces seguidas por el modelo de datos.
+
 ## Lo que todavía no está
 
-- Las otras 19 pantallas del diseño.
-- El modelo de datos (SwiftData) y el guardado real: el Home enseña cifras de ejemplo.
-- Los iconos propios de línea. El Home usa SF Symbols de momento; se cambian en
-  `HomeSection.symbol` y `HomeTab.symbol` cuando el set esté dibujado.
-- El libro 3D, el maniquí y las animaciones de ejercicios.
+- Las animaciones de los ejercicios. Hace falta Lottie **y** los archivos dibujados;
+  `ExerciseView` tiene el hueco reservado y dicho.
+- El maniquí en 3D y la ropa como malla. Hasta que exista el modelado, el armario usa la
+  figura de línea de `Mannequin.swift`, que marca en musgo lo que llevas puesto.
+- Los iconos propios de línea. El inicio usa SF Symbols de momento; se cambian en
+  `symbol(for:)` y `HomeTab.symbol` cuando el set esté dibujado.
+- El mapa de los lugares de Viajes (MapKit).
+- **Nada de esto se ha ejecutado nunca en un simulador.** Todo lo que hay compila en el
+  CI; que compile y que funcione no son lo mismo.
 
 ## Una nota sobre seguridad
 

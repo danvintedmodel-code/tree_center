@@ -28,9 +28,30 @@ public enum TreeCenterSchema {
         HomeWidget.self
     ]
 
-    public static func container(inMemory: Bool = false) throws -> ModelContainer {
+    /// El almacén de la app.
+    ///
+    /// La ruta se escribe a mano (ver `StoreFiles`) en vez de dejar que
+    /// SwiftData elija: una copia de seguridad necesita saber qué archivos son
+    /// suyos, y el sitio por defecto no está prometido por escrito en ningún
+    /// sitio.
+    ///
+    /// `cloud` pide la sincronización con iCloud. **Necesita el entitlement de
+    /// CloudKit en el target**, y sin él esto lanza en vez de arrancar en local
+    /// sin avisar: quien llama decide qué hacer con el error.
+    public static func container(inMemory: Bool = false,
+                                 cloud: Bool = false) throws -> ModelContainer {
         let schema = Schema(models)
-        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory)
+
+        let configuration: ModelConfiguration
+        if inMemory {
+            configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        } else {
+            StoreFiles.ensureDirectory()
+            configuration = ModelConfiguration(schema: schema,
+                                               url: StoreFiles.storeURL,
+                                               cloudKitDatabase: cloud ? .automatic : .none)
+        }
+
         return try ModelContainer(for: schema, configurations: [configuration])
     }
 
