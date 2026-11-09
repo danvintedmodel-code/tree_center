@@ -32,6 +32,11 @@ public enum StoreFiles {
 
     public static let storeName = "TreeCenter.store"
 
+    /// El punto de delante es de SwiftData, no mío.
+    public static let supportName = ".TreeCenter_SUPPORT"
+
+    public static let restoreName = "restauracion-pendiente"
+
     public static var directory: URL {
         URL.applicationSupportDirectory
     }
@@ -40,15 +45,15 @@ public enum StoreFiles {
         directory.appending(path: storeName)
     }
 
-    /// La carpeta de las fotos. El punto de delante es de SwiftData, no mío.
+    /// La carpeta de las fotos.
     public static var supportURL: URL {
-        directory.appending(path: ".TreeCenter_SUPPORT")
+        directory.appending(path: supportName)
     }
 
     /// Donde se deja una copia importada hasta el siguiente arranque. Ver
     /// `applyPendingRestore()`.
     public static var pendingRestoreURL: URL {
-        directory.appending(path: "restauracion-pendiente")
+        directory.appending(path: restoreName)
     }
 
     /// Application Support no siempre existe en una instalación nueva.
@@ -61,11 +66,18 @@ public enum StoreFiles {
 
     /// Los trozos del almacén que existen de verdad, listos para copiar.
     public static func pieces() -> [URL] {
+        pieces(in: directory)
+    }
+
+    /// La misma cuenta sobre cualquier carpeta. Existe para poder probar lo de
+    /// abajo sin tocar el almacén de verdad: una prueba que borra el
+    /// `Application Support` del simulador es una prueba que no se escribe.
+    public static func pieces(in folder: URL) -> [URL] {
         let candidates = [
-            storeURL,
-            directory.appending(path: storeName + "-wal"),
-            directory.appending(path: storeName + "-shm"),
-            supportURL
+            folder.appending(path: storeName),
+            folder.appending(path: storeName + "-wal"),
+            folder.appending(path: storeName + "-shm"),
+            folder.appending(path: supportName)
         ]
         return candidates.filter { FileManager.default.fileExists(atPath: $0.path) }
     }
@@ -118,8 +130,13 @@ public enum StoreFiles {
     /// Devuelve true si ha restaurado algo.
     @discardableResult
     public static func applyPendingRestore() -> Bool {
+        applyPendingRestore(in: directory)
+    }
+
+    @discardableResult
+    public static func applyPendingRestore(in folder: URL) -> Bool {
         let manager = FileManager.default
-        let incoming = pendingRestoreURL
+        let incoming = folder.appending(path: restoreName)
 
         guard manager.fileExists(atPath: incoming.path),
               manager.fileExists(atPath: incoming.appending(path: storeName).path) else {
@@ -131,7 +148,7 @@ public enum StoreFiles {
 
         // Fuera lo que hay. Si esto falla a medias, el siguiente paso lo pisa
         // igual, porque los nombres son los mismos.
-        for piece in pieces() {
+        for piece in pieces(in: folder) {
             try? manager.removeItem(at: piece)
         }
 
@@ -139,7 +156,7 @@ public enum StoreFiles {
         if let children = try? manager.contentsOfDirectory(at: incoming,
                                                            includingPropertiesForKeys: nil) {
             for child in children {
-                let destination = directory.appending(path: child.lastPathComponent)
+                let destination = folder.appending(path: child.lastPathComponent)
                 try? manager.removeItem(at: destination)
                 do {
                     try manager.moveItem(at: child, to: destination)
