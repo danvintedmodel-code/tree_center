@@ -74,7 +74,57 @@ No prueban "que el código corre". Prueban la promesa de seguridad del Acceso:
 Si alguna de las tres últimas se pone en verde al revés, el trazo ha dejado de ser una
 contraseña y se ha convertido en un gesto cualquiera.
 
-## Montarlo en Xcode (cuando llegues al Mac)
+## Montarlo por terminal (la vía corta)
+
+Lo que **no** se puede evitar: **hace falta Xcode instalado**. Las Command Line Tools
+sueltas (`xcode-select --install`) traen el compilador, pero **no traen el SDK de iOS ni
+el simulador**, así que con ellas no se puede compilar esta app. No hay forma de hacer una
+app de iPhone sin Xcode en un Mac.
+
+Lo que sí se puede: **todo lo demás**, sin tocar un solo diálogo.
+
+```bash
+# 1. Homebrew, si no lo tienes
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# 2. xcodes: instala la version de Xcode que pidas, con su Apple ID
+brew install xcodesorg/made/xcodes
+xcodes install 15.2          # el mas nuevo que entra en Ventura 13.7
+
+# 3. el simulador de iOS, que en Xcode 15 va aparte
+xcodes runtimes install "iOS 17.2"
+
+# 4. el codigo
+git clone https://github.com/danvintedmodel-code/tree_center.git
+cd tree_center
+
+# 5. el proyecto de Xcode, escrito y no pinchado
+brew install xcodegen
+xcodegen generate
+
+# 6. abrir y ejecutar
+open TreeCenter.xcodeproj
+```
+
+El paso 5 es el que se come la receta manual de abajo: `project.yml` ya declara el target
+de la app, el paquete local, el mínimo de iOS 17 y **las tres claves de permiso**. Nada
+que olvidar.
+
+Y si prefieres no abrir Xcode ni para ejecutar:
+
+```bash
+xcodebuild build -project TreeCenter.xcodeproj -scheme TreeCenter \
+  -destination 'platform=iOS Simulator,name=iPhone 15 Pro'
+
+xcrun simctl boot "iPhone 15 Pro"
+open -a Simulator
+```
+
+El `.xcodeproj` **no está en git**: es un archivo derivado de `project.yml`. Se regenera
+con `xcodegen` cuando haga falta, y el CI lo hace en cada push para comprobar que el
+montaje sigue bien.
+
+## Montarlo a mano en Xcode
 
 1. **Xcode → File → New → Project → iOS → App.**
    Product Name `TreeCenter`, Interface **SwiftUI**, Storage **None**, mínimo **iOS 17.0**.

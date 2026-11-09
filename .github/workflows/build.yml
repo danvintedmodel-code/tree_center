@@ -55,13 +55,37 @@ jobs:
       - name: Esquemas del paquete
         run: xcodebuild -list
 
-      - name: Compilar la app para iOS
+      - name: Compilar la libreria para iOS
         run: |
           set -o pipefail
           xcodebuild build \
             -scheme TreeCenterKit \
             -destination 'generic/platform=iOS' \
             CODE_SIGNING_ALLOWED=NO
+
+      # Hasta aqui el CI solo compilaba el paquete, que es casi todo el codigo
+      # pero no es la app: el `@main`, el Info.plist y el enlace del paquete al
+      # target no los tocaba nadie hasta abrir Xcode. Ahora se genera el
+      # proyecto con XcodeGen y se compila la app de verdad, con sus tres claves
+      # de permiso dentro. Si el montaje esta roto, salta aqui y no en su mesa.
+      - name: Generar el proyecto de la app
+        run: |
+          brew install xcodegen
+          xcodegen generate
+          ls -d TreeCenter.xcodeproj
+          echo "--- Info.plist generado ---"
+          plutil -p App/Info.plist
+
+      - name: Compilar la app de verdad
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project TreeCenter.xcodeproj \
+            -scheme TreeCenter \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
 
       # El nombre del simulador cambia con cada imagen de GitHub, asi que se busca
       # uno que exista en vez de dejarlo escrito a mano y que falle dentro de un mes.

@@ -12,3 +12,8 @@ build/
 xcuserdata/
 *.xcscmblueprint
 *.xccheckout
+
+# El proyecto de Xcode se genera con `xcodegen` desde project.yml: es derivado,
+# y dos personas tocandolo a la vez da un conflicto que no se resuelve.
+*.xcodeproj
+App/Info.plist

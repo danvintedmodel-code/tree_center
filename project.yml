@@ -1,0 +1,71 @@
+# El proyecto de Xcode, escrito en vez de pinchado.
+#
+# XcodeGen lee esto y escribe `TreeCenter.xcodeproj`. La idea es que montar la
+# app no sea una receta de cinco pasos que hay que hacer bien a mano —crear el
+# proyecto, borrar los archivos de plantilla, añadir el paquete local, escribir
+# tres claves en Info.plist— sino una orden:
+#
+#     xcodegen
+#
+# Y que si algún día hay que volver a montarlo, salga igual. Lo que más tiempo
+# se come en esa receta es olvidar una clave de permiso: sin ellas la app no
+# avisa, se cierra. Aquí van escritas y no se pueden olvidar.
+#
+# El .xcodeproj generado no entra en git a propósito: es un archivo derivado de
+# este, y dos personas tocándolo a la vez es un conflicto que no se resuelve.
+
+name: TreeCenter
+
+options:
+  bundleIdPrefix: com.treecenter
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  # El .xcodeproj se genera en la raíz, al lado de Package.swift. No choca con
+  # la carpeta `TreeCenter/`: una es `TreeCenter.xcodeproj` y la otra no.
+  generateEmptyDirectories: false
+
+packages:
+  TreeCenterLocal:
+    path: .
+
+targets:
+  TreeCenter:
+    type: application
+    platform: iOS
+
+    # Un solo archivo: el `@main`. Todo lo demás vive en el paquete, que es el
+    # que compila el CI. Ver el comentario de arriba en TreeCenterApp.swift.
+    sources:
+      - path: TreeCenter/TreeCenterApp.swift
+
+    dependencies:
+      - package: TreeCenterLocal
+        product: TreeCenterKit
+
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Tree Center
+        CFBundleShortVersionString: "0.1"
+        UILaunchScreen: {}
+        UIUserInterfaceStyle: Automatic
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+
+        # Las tres claves de permiso. Sin la primera, iOS mata la app en el
+        # momento de pedir Face ID, y sin error claro.
+        NSFaceIDUsageDescription: Para entrar en Tree Center sin dibujar el trazo.
+        NSCameraUsageDescription: Para hacerle una foto al plato, a la prenda o al recibo.
+        NSPhotoLibraryUsageDescription: Para elegir fotos de recetas, prendas, caprichos y lugares.
+
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.treecenter.app
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        # 1 = solo iPhone. Es una app personal para un iPhone 13 Pro.
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_VERSION: "5.9"
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_STYLE: Automatic
