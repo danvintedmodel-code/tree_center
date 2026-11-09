@@ -15,10 +15,32 @@ concurrency:
 jobs:
   ios:
     name: iOS
-    runs-on: macos-latest
+    # Sonoma a proposito y no macos-latest: es la imagen que todavia trae
+    # Xcode 15, y Xcode 15 es lo que hay en el Mac de desarrollo.
+    runs-on: macos-14
 
     steps:
       - uses: actions/checkout@v4
+
+      # El Mac de desarrollo es un MacBook Pro de 2017 con Ventura 13.7, y ahi el
+      # Xcode mas nuevo que entra es el 15.2. Si el CI compilara con el 16 o el 26,
+      # un verde aqui no prometeria nada alli: cualquier cosa que su Xcode no
+      # conozca pasaria el CI y fallaria en su mesa. Asi que se compila con un
+      # Xcode 15, lo mas cerca posible del suyo.
+      - name: Usar un Xcode 15
+        run: |
+          ls -d /Applications/Xcode*.app || true
+          LIST=$(ls -d /Applications/Xcode_15*.app 2>/dev/null | sort -V || true)
+          PICK=$(echo "$LIST" | grep -E 'Xcode_15(\.0(\.[0-9]+)?|\.1|\.2)?\.app$' | head -1)
+          if [ -z "$PICK" ]; then
+            PICK=$(echo "$LIST" | head -1)
+          fi
+          if [ -z "$PICK" ]; then
+            echo "::warning::No hay ningun Xcode 15 en esta imagen. Se compila con el de serie, que es mas nuevo que el del Mac de desarrollo: un verde aqui no promete un verde alli."
+          else
+            echo "Elegido: $PICK"
+            sudo xcode-select -s "$PICK/Contents/Developer"
+          fi
 
       - name: Que Xcode ha tocado
         run: xcodebuild -version
