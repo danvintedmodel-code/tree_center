@@ -63,30 +63,6 @@ jobs:
             -destination 'generic/platform=iOS' \
             CODE_SIGNING_ALLOWED=NO
 
-      # Hasta aqui el CI solo compilaba el paquete, que es casi todo el codigo
-      # pero no es la app: el `@main`, el Info.plist y el enlace del paquete al
-      # target no los tocaba nadie hasta abrir Xcode. Ahora se genera el
-      # proyecto con XcodeGen y se compila la app de verdad, con sus tres claves
-      # de permiso dentro. Si el montaje esta roto, salta aqui y no en su mesa.
-      - name: Generar el proyecto de la app
-        run: |
-          brew install xcodegen
-          xcodegen generate
-          ls -d TreeCenter.xcodeproj
-          echo "--- Info.plist generado ---"
-          plutil -p App/Info.plist
-
-      - name: Compilar la app de verdad
-        run: |
-          set -o pipefail
-          xcodebuild build \
-            -project TreeCenter.xcodeproj \
-            -scheme TreeCenter \
-            -destination 'generic/platform=iOS' \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY=""
-
       # El nombre del simulador cambia con cada imagen de GitHub, asi que se busca
       # uno que exista en vez de dejarlo escrito a mano y que falle dentro de un mes.
       - name: Elegir simulador
@@ -108,3 +84,32 @@ jobs:
             -scheme TreeCenter-Package \
             -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.device }}" \
             CODE_SIGNING_ALLOWED=NO
+
+      # Todo lo del paquete va ANTES de generar el proyecto, y el orden no es
+      # estetico: `xcodebuild` sin `-project` elige que abrir mirando la carpeta,
+      # y en cuanto existe un TreeCenter.xcodeproj deja de ver el paquete. Con el
+      # proyecto generado primero, `-scheme TreeCenter-Package` falla con un
+      # "does not contain a scheme named" que no tiene nada que ver con el codigo.
+      #
+      # Hasta ahora el CI solo compilaba el paquete, que es casi todo el codigo
+      # pero no es la app: el `@main`, el Info.plist y el enlace del paquete al
+      # target no los tocaba nadie hasta abrir Xcode. Esto compila la app de
+      # verdad, con sus tres claves de permiso dentro.
+      - name: Generar el proyecto de la app
+        run: |
+          brew install xcodegen
+          xcodegen generate
+          ls -d TreeCenter.xcodeproj
+          echo "--- Info.plist generado ---"
+          plutil -p App/Info.plist
+
+      - name: Compilar la app de verdad
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project TreeCenter.xcodeproj \
+            -scheme TreeCenter \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""

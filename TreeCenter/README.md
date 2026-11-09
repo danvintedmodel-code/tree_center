@@ -124,6 +124,11 @@ El `.xcodeproj` **no está en git**: es un archivo derivado de `project.yml`. Se
 con `xcodegen` cuando haga falta, y el CI lo hace en cada push para comprobar que el
 montaje sigue bien.
 
+Un detalle que muerde: en cuanto existe el `.xcodeproj` en la raíz, **`xcodebuild` sin
+`-project` deja de ver el paquete** y abre el proyecto. Así que para las pruebas del
+paquete usa `swift test`, que no se confunde, y no `xcodebuild -scheme TreeCenter-Package`.
+(El CI lo resuelve al revés: hace todo lo del paquete *antes* de generar el proyecto.)
+
 ## Montarlo a mano en Xcode
 
 1. **Xcode → File → New → Project → iOS → App.**
