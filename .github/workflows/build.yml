@@ -103,13 +103,43 @@ jobs:
           echo "--- Info.plist generado ---"
           plutil -p App/Info.plist
 
+      # La app se compila en Release y sin firmar, y se empaqueta como .ipa.
+      #
+      # Sin firmar a proposito: la firma la pone despues Sideloadly (o AltStore)
+      # desde el PC de Windows, con el Apple ID gratuito. Es lo que permite
+      # instalarla en un iPhone con iOS nuevo sin pasar por el Mac de 2017, cuyo
+      # Xcode 15.2 no sabe instalar en iOS 18 o posterior. Este runner si tiene
+      # el Xcode nuevo, y el minimo de iOS 17 hace que la app corra igual.
       - name: Compilar la app de verdad
         run: |
           set -o pipefail
           xcodebuild build \
             -project TreeCenter.xcodeproj \
             -scheme TreeCenter \
+            -configuration Release \
             -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY=""
+
+      - name: Empaquetar el .ipa
+        run: |
+          APP=$(find build/Build/Products/Release-iphoneos -maxdepth 1 -name '*.app' | head -1)
+          if [ -z "$APP" ]; then
+            echo "No ha salido ninguna .app de la compilacion:"
+            ls -R build/Build/Products || true
+            exit 1
+          fi
+          mkdir -p Payload
+          cp -R "$APP" Payload/
+          zip -qr TreeCenter.ipa Payload
+          ls -lh TreeCenter.ipa
+
+      # Se descarga desde la pagina del run en GitHub (seccion "Artifacts").
+      - name: Dejar el .ipa para descargar
+        uses: actions/upload-artifact@v4
+        with:
+          name: TreeCenter-ipa
+          path: TreeCenter.ipa
+          retention-days: 30

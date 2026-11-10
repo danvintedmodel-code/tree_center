@@ -74,7 +74,46 @@ No prueban "que el código corre". Prueban la promesa de seguridad del Acceso:
 Si alguna de las tres últimas se pone en verde al revés, el trazo ha dejado de ser una
 contraseña y se ha convertido en un gesto cualquiera.
 
+## Instalarla en el iPhone, gratis y sin Mac
+
+Es la vía que funciona con el Mac que hay. Un MacBook Pro de 2017 se queda en Ventura y
+en **Xcode 15.2**, y **Xcode 15 no sabe instalar en iPhones con iOS 18 o posterior**:
+Apple pide Xcode 16 para eso. Así que el Mac sirve como mucho para el simulador, y la
+app llega al móvil por otro camino.
+
+1. **El CI la compila.** En cada push, GitHub (que sí tiene el Xcode nuevo) deja un
+   `TreeCenter.ipa` sin firmar en la página del run: *Actions → el run → Artifacts →
+   TreeCenter-ipa*. Baja como zip; dentro está el `.ipa`.
+2. **En el PC con Windows, instala Sideloadly** desde su web oficial, `sideloadly.io`.
+   AltStore (`altstore.io`) hace lo mismo; con una basta.
+3. **Conecta el iPhone por cable**, abre Sideloadly, arrastra el `.ipa`, escribe tu
+   Apple ID y pulsa *Start*. Sideloadly le pide a Apple la firma gratuita y la instala.
+4. **En el iPhone, dos permisos la primera vez:**
+   - *Ajustes → General → VPN y gestión de dispositivos* → confía en tu Apple ID.
+   - *Ajustes → Privacidad y seguridad → Modo de desarrollador* → actívalo. El iPhone
+     se reinicia y te pide confirmarlo.
+5. Abre Tree Center.
+
+Lo que trae ir gratis, sin el programa de pago de Apple:
+
+- **La firma dura 7 días.** Pasado ese plazo la app no abre hasta que repitas el paso 3.
+  Los datos **no se pierden** al renovar: se instala encima. Sideloadly puede renovarla
+  solo si el PC y el iPhone están en la misma wifi.
+- **Una versión nueva se instala igual**: bajas el `.ipa` del último run y repites el
+  paso 3. No hay actualizaciones automáticas.
+- **Sin iCloud.** Apple lo reserva al programa de pago, así que la app no puede
+  sincronizar. Lo que protege los datos es la copia: *Ajustes → Guardar una copia* y
+  guardarla en *Archivos → iCloud Drive*.
+- **Como mucho 3 apps** instaladas así a la vez con un Apple ID gratuito.
+- Estas herramientas necesitan **la contraseña del Apple ID** para pedirle la firma a
+  Apple. Usar un Apple ID secundario solo para esto es una buena costumbre.
+
+Lo que **sí** funciona igual: Face ID, cámara, galería, el recorte de prendas, los
+recordatorios (son avisos del propio iPhone) y todo lo que no sea iCloud.
+
 ## Montarlo por terminal (la vía corta)
+
+Con el Mac de 2017 esto sirve para **el simulador**. Para el iPhone, la vía de arriba.
 
 Lo que **no** se puede evitar: **hace falta Xcode instalado**. Las Command Line Tools
 sueltas (`xcode-select --install`) traen el compilador, pero **no traen el SDK de iOS ni
