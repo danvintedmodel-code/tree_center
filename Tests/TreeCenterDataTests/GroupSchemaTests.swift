@@ -116,7 +116,13 @@ final class GroupSchemaTests: XCTestCase {
         let note = WorkNote(text: "# Plan\n[ ] Probar el .ipa")
         let idea = WorkIdea(text: "Modo foco")
         let reminder = WorkReminder(kind: .once, hour: 19, minute: 0, date: Date(), label: "Entregar")
-        [projectTask, courseTask, note, idea, reminder].forEach { context.insert($0) }
+        // Uno a uno: en una sola lista serían de cinco tipos distintos, y Swift
+        // no tiene un tipo común con el que llamar a `insert`.
+        context.insert(projectTask)
+        context.insert(courseTask)
+        context.insert(note)
+        context.insert(idea)
+        context.insert(reminder)
 
         project.adopt(projectTask)
         project.adopt(note)
