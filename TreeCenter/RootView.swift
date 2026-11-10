@@ -9,7 +9,6 @@ public struct RootView: View {
     private let container: ModelContainer
     private let storeIsTemporary: Bool
     private let restored: Bool
-    private let cloudFailed: Bool
 
     @State private var dismissedRestoreNote = false
 
@@ -21,38 +20,16 @@ public struct RootView: View {
         // archivos no da un error, da una base a medias.
         restored = StoreFiles.applyPendingRestore()
 
-        // Luego, en este orden: iCloud si lo has pedido, el iPhone si no (o si
-        // iCloud no puede), y memoria como último recurso.
-        //
-        // Que iCloud falle es lo normal hasta que el entitlement esté puesto en
-        // Xcode, así que caer al almacén local tiene que ser silencioso para la
-        // app y visible para ti: de ahí el aviso de arriba.
-        if TreeCenterSettings.usesCloud {
-            if let cloud = try? TreeCenterSchema.container(cloud: true) {
-                container = cloud
-                storeIsTemporary = false
-                cloudFailed = false
-            } else if let disk = try? TreeCenterSchema.container() {
-                container = disk
-                storeIsTemporary = false
-                cloudFailed = true
-            } else if let memory = try? TreeCenterSchema.container(inMemory: true) {
-                container = memory
-                storeIsTemporary = true
-                cloudFailed = true
-            } else {
-                fatalError("No se ha podido abrir ningún almacén de Tree Center.")
-            }
-        } else if let disk = try? TreeCenterSchema.container() {
+        // Sin iCloud: instalada gratis, Apple no da el permiso de CloudKit, así
+        // que el almacén vive solo en el iPhone. Si el de disco no abre, se
+        // arranca en memoria: perder una sesión de datos es malo, pero una app
+        // que no abre es peor, y así queda margen para exportar lo que haya.
+        if let disk = try? TreeCenterSchema.container() {
             container = disk
             storeIsTemporary = false
-            cloudFailed = false
         } else if let memory = try? TreeCenterSchema.container(inMemory: true) {
-            // Perder una sesión de datos es malo; una app que no abre es peor,
-            // y así queda margen para exportar lo que haya y arreglarlo.
             container = memory
             storeIsTemporary = true
-            cloudFailed = false
         } else {
             fatalError("No se ha podido abrir ningún almacén de Tree Center.")
         }
@@ -65,7 +42,9 @@ public struct RootView: View {
             if lock.phase == .unlocked {
                 VStack(spacing: 0) {
                     if storeIsTemporary { banner(.clay, "Los datos de esta sesión no se están guardando.") }
-                    if cloudFailed { banner(.sand, "iCloud no ha podido abrirse. Se está guardando solo en este iPhone.") }
+                    if let left = InstallInfo.daysLeft(), left <= 1 {
+                        banner(.sand, "\(InstallInfo.describe()). Renuévala desde el PC con el iPhone conectado.")
+                    }
                     if restored && !dismissedRestoreNote {
                         restoredBanner
                     }
@@ -82,6 +61,19 @@ public struct RootView: View {
         .task {
             // El armazón mínimo: la semana, las carteras y los widgets.
             try? TreeCenterSchema.seedIfEmpty(container.mainContext)
+
+            // Cada renovación de la firma trae una fecha de caducidad nueva, así
+            // que el aviso del día antes se reprograma en cada arranque.
+            let defaults = UserDefaults.standard
+            let warnExpiry = defaults.object(forKey: InstallInfo.expiryWarnKey) as? Bool ?? true
+            let warnBackup = defaults.object(forKey: InstallInfo.backupWarnKey) as? Bool ?? true
+            // El aviso de caducidad viene encendido de serie, y sin permiso no
+            // sonaría: instalada con firma de 7 días, se pide en el arranque.
+            if InstallInfo.signature != nil && warnExpiry {
+                _ = await ReminderScheduler.ensurePermission()
+            }
+            InstallInfo.scheduleExpiryWarning(enabled: warnExpiry)
+            InstallInfo.scheduleBackupReminder(enabled: warnBackup)
         }
     }
 

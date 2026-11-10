@@ -1,5 +1,6 @@
 import SwiftData
 import SwiftUI
+import TreeCenterCore
 import TreeCenterData
 
 // Finanzas. Los aros arriba, las carteras en medio y el reparto abajo del todo,
@@ -40,6 +41,7 @@ struct FinanceView: View {
                     legend
                     walletCards
                     newWalletButton
+                    allocationCard
                 }
                 .padding(.horizontal, TCSpace.gutter)
                 .padding(.bottom, 16)
@@ -293,6 +295,79 @@ struct FinanceView: View {
     }
 
     // MARK: - Acciones
+
+    // MARK: - El reparto de lo que entra
+
+    /// Qué parte de cada ingreso va a cada cartera. Entre todas no pasan de
+    /// 100 %; lo que falte se queda en la cartera donde entra el ingreso.
+    private var allocationCard: some View {
+        let percents = wallets.map(\.allocationPercent)
+        let assigned = 100 - IncomeSplit.unassigned(percents)
+
+        return VStack(alignment: .leading, spacing: 10) {
+            TCSectionLabel(text: "Reparto de lo que entra", trailing: "\(assigned) de 100 %")
+
+            VStack(alignment: .leading, spacing: 12) {
+                GeometryReader { proxy in
+                    HStack(spacing: 0) {
+                        ForEach(wallets) { wallet in
+                            Rectangle()
+                                .fill(wallet.color.swiftUI)
+                                .frame(width: proxy.size.width * CGFloat(wallet.allocationPercent) / 100)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                }
+                .frame(height: 10)
+                .background(TCColor.track)
+                .clipShape(Capsule())
+
+                ForEach(Array(wallets.enumerated()), id: \.element.persistentModelID) { index, wallet in
+                    HStack(spacing: 10) {
+                        Circle().fill(wallet.color.swiftUI).frame(width: 8, height: 8)
+                        Text(wallet.name).font(TCFont.font(13.5)).foregroundStyle(TCColor.text)
+                        Spacer(minLength: 8)
+                        percentButton("−", enabled: wallet.allocationPercent > 0) {
+                            wallet.allocationPercent = max(0, wallet.allocationPercent - 5)
+                        }
+                        Text("\(wallet.allocationPercent) %")
+                            .font(TCFont.font(14, .semibold))
+                            .monospacedDigit()
+                            .foregroundStyle(TCColor.text)
+                            .frame(width: 48)
+                        percentButton("+", enabled: wallet.allocationPercent + 5 <= IncomeSplit.maxPercent(for: index, in: percents)) {
+                            wallet.allocationPercent = min(IncomeSplit.maxPercent(for: index, in: percents),
+                                                           wallet.allocationPercent + 5)
+                        }
+                    }
+                }
+
+                Text(assigned < 100
+                     ? "Sin asignar: \(100 - assigned) %. Ese trozo se queda en la cartera donde apuntes el ingreso."
+                     : "Todo repartido.")
+                    .font(TCFont.font(11))
+                    .foregroundStyle(assigned < 100 ? TCColor.textMicro : TCColor.moss)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .tcCard(padding: 16)
+        }
+    }
+
+    private func percentButton(_ symbol: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+        Button {
+            action()
+            try? context.save()
+        } label: {
+            Text(symbol)
+                .font(TCFont.font(15, .medium))
+                .foregroundStyle(TCColor.textSoft)
+                .frame(width: 28, height: 28)
+                .overlay(Circle().stroke(TCColor.lineStrong, lineWidth: 1))
+                .opacity(enabled ? 1 : 0.35)
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+    }
 
     private func createWallet() {
         let name = newWalletName.trimmingCharacters(in: .whitespacesAndNewlines)

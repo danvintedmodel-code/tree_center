@@ -22,6 +22,7 @@ struct WardrobeView: View {
     @State private var editing: Garment?
     @State private var savingOutfit = false
     @State private var outfitName = ""
+    @State private var tryingOn = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -29,27 +30,37 @@ struct WardrobeView: View {
                            subtitle: garments.isEmpty ? nil : "\(garments.count) prendas",
                            back: { dismiss() })
 
-            VStack(spacing: 0) {
-                HStack(alignment: .top, spacing: 14) {
-                    rail
-                    mannequinBox
-                }
-                .frame(height: 388)
-
-                Spacer(minLength: 12)
-
-                animationChips
-
-                Spacer(minLength: 12)
-
-                strip
-
-                Spacer(minLength: 12)
-
-                buttons
+            HStack(spacing: 7) {
+                Button { tryingOn = false } label: { TCChip(text: "Maniquí", selected: !tryingOn) }
+                    .buttonStyle(.plain)
+                Button { tryingOn = true } label: { TCChip(text: "Probármelo con IA", selected: tryingOn) }
+                    .buttonStyle(.plain)
+                Spacer()
             }
             .padding(.horizontal, TCSpace.gutter)
-            .padding(.bottom, 8)
+            .padding(.bottom, 12)
+
+            if tryingOn {
+                TryOnInfo()
+            } else {
+                VStack(spacing: 0) {
+                    HStack(alignment: .top, spacing: 14) {
+                        rail
+                        mannequinBox
+                    }
+                    .frame(height: 388)
+
+                    Spacer(minLength: 12)
+
+                    strip
+
+                    Spacer(minLength: 12)
+
+                    buttons
+                }
+                .padding(.horizontal, TCSpace.gutter)
+                .padding(.bottom, 8)
+            }
         }
         .background(TCColor.bg)
         .toolbar(.hidden, for: .navigationBar)
@@ -126,37 +137,20 @@ struct WardrobeView: View {
                         .stroke(TCColor.line, lineWidth: 1)
                 )
 
-            Mannequin(worn: wornCategories)
-                .padding(.vertical, 18)
-                .padding(.horizontal, 26)
+            Mannequin(worn: wornGarments)
+                .padding(.top, 16)
+                .padding(.bottom, 30)
+                .padding(.horizontal, 20)
 
             VStack {
                 Spacer()
-                Text("figura de frente · el giro llega con el 3D")
+                Text(wornGarments.isEmpty ? "toca una prenda para ponértela" : "\(wornGarments.count) prendas puestas")
                     .font(TCFont.font(10))
                     .foregroundStyle(TCColor.textFaint)
                     .padding(.bottom, 10)
             }
         }
         .frame(maxWidth: .infinity)
-    }
-
-    /// Caminar y correr son animaciones del modelo 3D. Se dejan a la vista y
-    /// apagadas: esconderlas haría olvidar que el diseño las pide.
-    private var animationChips: some View {
-        VStack(spacing: 6) {
-            HStack(spacing: 7) {
-                TCChip(text: "Quieto", selected: true)
-                TCChip(text: "Camina")
-                TCChip(text: "Corre")
-            }
-            .opacity(0.45)
-
-            Text("Las animaciones llegan con el maniquí 3D")
-                .font(TCFont.font(10))
-                .foregroundStyle(TCColor.textFaint)
-        }
-        .allowsHitTesting(false)
     }
 
     // MARK: - Prendas

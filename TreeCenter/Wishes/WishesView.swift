@@ -15,7 +15,7 @@ struct WishesView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            TCScreenHeader(title: "Caprichos", back: { dismiss() })
+            TCScreenHeader(title: "Caprichos sanos", back: { dismiss() })
 
             ScrollView {
                 VStack(spacing: 14) {

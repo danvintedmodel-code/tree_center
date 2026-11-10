@@ -639,6 +639,7 @@ struct HomeView: View {
         switch section {
         case .food: return "Comida"
         case .projects: return "Proyectos"
+        case .wishes: return "Caprichos"
         default: return section.label
         }
     }

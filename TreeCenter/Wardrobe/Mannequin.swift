@@ -1,21 +1,25 @@
 import SwiftUI
 import TreeCenterData
+import UIKit
 
-// El maniquí, en línea, dibujado con Path.
+// El maniquí plano: una figura recortada, de frente, con la ropa puesta encima
+// por capas, como un recortable.
 //
-// No es el de verdad. El del diseño gira 360° y lleva la ropa como mallas
-// atadas a un esqueleto, y eso es RealityKit y trabajo de modelado que todavía
-// no existe. Esto es el sustituto honesto: una figura de frente que marca en
-// musgo lo que llevas puesto por categoría.
+// Se descartó el 3D realista: para que una prenda caiga como de verdad hace falta
+// un modelo 3D de cada una, y eso no sale de una foto. Esto sí: cada prenda va en
+// su sitio del cuerpo y en el orden de vestirse (los calcetines debajo de las
+// zapatillas, la camiseta debajo de la sudadera).
 //
-// Cuando entre el modelo 3D, esta vista se cambia por la otra y nada más de la
-// pantalla se entera.
+// Si la prenda tiene foto, se pone la foto recortada, que el propio iPhone quita
+// del fondo al hacerla; si no, la silueta de la prenda en su color.
 
 struct Mannequin: View {
-    let worn: Set<GarmentCategory>
-    var accent: Color = TCColor.moss
+    let worn: [Garment]
 
-    private let canvas = CGSize(width: 160, height: 360)
+    private let canvas = CGSize(width: 160, height: 316)
+
+    /// El orden de vestirse: lo que va debajo, primero.
+    static let layers: [GarmentCategory] = [.socks, .trousers, .shoes, .shirts, .hoodies, .necklaces, .caps]
 
     var body: some View {
         GeometryReader { geo in
@@ -25,152 +29,158 @@ struct Mannequin: View {
             let t = CGAffineTransform(scaleX: scale, y: scale)
                 .concatenating(CGAffineTransform(translationX: dx, y: dy))
 
-            ZStack {
-                body(hiddenTorso: coversTorso).applying(t)
-                    .stroke(TCColor.textSoft, style: stroke(1.5))
+            ZStack(alignment: .topLeading) {
+                silhouette.applying(t).fill(TCColor.track)
+                silhouette.applying(t).stroke(TCColor.lineStrong, lineWidth: 1)
 
-                ForEach(Array(worn).sorted { $0.rawValue < $1.rawValue }, id: \.self) { category in
-                    if let piece = garmentPath(category) {
-                        piece.applying(t).fill(accent.opacity(0.11))
-                        piece.applying(t).stroke(accent, style: stroke(1.5))
+                ForEach(Self.layers, id: \.self) { category in
+                    if let garment = wornBy[category] {
+                        piece(garment, category: category, transform: t, scale: scale, dx: dx, dy: dy)
                     }
                 }
-
-                stand.applying(t).stroke(TCColor.lineStrong, style: stroke(1.3))
             }
         }
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel(label)
     }
 
-    private func stroke(_ width: CGFloat) -> StrokeStyle {
-        StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round)
-    }
-
-    private var coversTorso: Bool {
-        worn.contains(.hoodies) || worn.contains(.shirts)
+    private var wornBy: [GarmentCategory: Garment] {
+        var map: [GarmentCategory: Garment] = [:]
+        for garment in worn { map[garment.category] = garment }
+        return map
     }
 
     private var label: String {
         worn.isEmpty
             ? "Maniquí sin ropa"
-            : "Maniquí con " + worn.map { $0.label.lowercased() }.sorted().joined(separator: ", ")
+            : "Maniquí con " + worn.map(\.name).joined(separator: ", ")
+    }
+
+    @ViewBuilder
+    private func piece(_ garment: Garment, category: GarmentCategory,
+                       transform t: CGAffineTransform, scale: CGFloat, dx: CGFloat, dy: CGFloat) -> some View {
+        let shape = Self.shape(category)
+
+        if let data = garment.image, let image = UIImage(data: data) {
+            // La foto ocupa la caja de su sitio en el cuerpo, sin deformarse.
+            let box = shape.boundingRect
+            Image(uiImage: image)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: box.width * scale, height: box.height * scale)
+                .offset(x: dx + box.minX * scale, y: dy + box.minY * scale)
+        } else if category == .necklaces {
+            shape.applying(t).stroke(garment.color.swiftUI, style: StrokeStyle(lineWidth: 1.8, lineCap: .round))
+        } else {
+            shape.applying(t).fill(garment.color.swiftUI)
+            shape.applying(t).stroke(Color.black.opacity(0.3), lineWidth: 1)
+        }
     }
 
     // MARK: - El cuerpo
 
-    private func body(hiddenTorso: Bool) -> Path {
+    private var silhouette: Path {
         var p = Path()
+        p.addEllipse(in: CGRect(x: 60, y: 20, width: 40, height: 40))
+        p.addRoundedRect(in: CGRect(x: 73, y: 56, width: 14, height: 22), cornerSize: CGSize(width: 4, height: 4))
 
-        p.addEllipse(in: CGRect(x: 61.5, y: 16.5, width: 37, height: 47))
-        p.move(to: CGPoint(x: 80, y: 63.5)); p.addLine(to: CGPoint(x: 80, y: 74))
+        // Torso
+        p.move(to: CGPoint(x: 52, y: 80))
+        p.addQuadCurve(to: CGPoint(x: 108, y: 80), control: CGPoint(x: 80, y: 72))
+        p.addLine(to: CGPoint(x: 114, y: 150))
+        p.addQuadCurve(to: CGPoint(x: 98, y: 170), control: CGPoint(x: 112, y: 168))
+        p.addLine(to: CGPoint(x: 62, y: 170))
+        p.addQuadCurve(to: CGPoint(x: 46, y: 150), control: CGPoint(x: 48, y: 168))
+        p.closeSubpath()
 
-        if !hiddenTorso {
-            p.move(to: CGPoint(x: 54, y: 84))
-            p.addQuadCurve(to: CGPoint(x: 106, y: 84), control: CGPoint(x: 80, y: 75))
-            p.addLine(to: CGPoint(x: 101, y: 152))
-            p.addQuadCurve(to: CGPoint(x: 59, y: 152), control: CGPoint(x: 80, y: 159))
+        // Brazos
+        for side in [CGFloat(1), -1] {
+            let x = { (value: CGFloat) in 80 + (value - 80) * side }
+            p.move(to: CGPoint(x: x(52), y: 82))
+            p.addLine(to: CGPoint(x: x(38), y: 128))
+            p.addLine(to: CGPoint(x: x(34), y: 170))
+            p.addLine(to: CGPoint(x: x(42), y: 171))
+            p.addLine(to: CGPoint(x: x(48), y: 132))
+            p.addLine(to: CGPoint(x: x(58), y: 100))
             p.closeSubpath()
-
-            p.move(to: CGPoint(x: 54, y: 86))
-            p.addLine(to: CGPoint(x: 42, y: 148))
-            p.move(to: CGPoint(x: 106, y: 86))
-            p.addLine(to: CGPoint(x: 118, y: 148))
         }
+        p.addEllipse(in: CGRect(x: 32, y: 170, width: 12, height: 12))
+        p.addEllipse(in: CGRect(x: 116, y: 170, width: 12, height: 12))
 
-        // Antebrazos y manos: se ven lleves lo que lleves.
-        p.move(to: CGPoint(x: 44, y: 139)); p.addLine(to: CGPoint(x: 40, y: 174))
-        p.move(to: CGPoint(x: 116, y: 139)); p.addLine(to: CGPoint(x: 120, y: 174))
-        p.addEllipse(in: CGRect(x: 34.4, y: 173.8, width: 9.2, height: 12.4))
-        p.addEllipse(in: CGRect(x: 116.4, y: 173.8, width: 9.2, height: 12.4))
-
-        if !worn.contains(.trousers) {
-            p.move(to: CGPoint(x: 67, y: 190))
-            p.addLine(to: CGPoint(x: 62, y: 250)); p.addLine(to: CGPoint(x: 60, y: 306))
-            p.move(to: CGPoint(x: 93, y: 190))
-            p.addLine(to: CGPoint(x: 98, y: 250)); p.addLine(to: CGPoint(x: 100, y: 306))
-        }
-
-        if !worn.contains(.shoes) {
-            p.move(to: CGPoint(x: 52, y: 306)); p.addLine(to: CGPoint(x: 68, y: 306))
-            p.move(to: CGPoint(x: 92, y: 306)); p.addLine(to: CGPoint(x: 108, y: 306))
-        }
-
-        return p
-    }
-
-    private var stand: Path {
-        var p = Path()
-        p.addEllipse(in: CGRect(x: 32, y: 313, width: 96, height: 18))
+        // Piernas y pies
+        p.addRect(CGRect(x: 63, y: 166, width: 15, height: 126))
+        p.addRect(CGRect(x: 82, y: 166, width: 15, height: 126))
+        p.addRoundedRect(in: CGRect(x: 56, y: 290, width: 24, height: 12), cornerSize: CGSize(width: 3, height: 3))
+        p.addRoundedRect(in: CGRect(x: 80, y: 290, width: 24, height: 12), cornerSize: CGSize(width: 3, height: 3))
         return p
     }
 
     // MARK: - La ropa
 
-    private func garmentPath(_ category: GarmentCategory) -> Path? {
+    static func shape(_ category: GarmentCategory) -> Path {
         var p = Path()
-
         switch category {
-        case .caps:
-            p.move(to: CGPoint(x: 58, y: 34))
-            p.addQuadCurve(to: CGPoint(x: 102, y: 34), control: CGPoint(x: 80, y: 8))
-            p.closeSubpath()
-            p.move(to: CGPoint(x: 58, y: 34)); p.addLine(to: CGPoint(x: 44, y: 37))
-
-        case .necklaces:
-            p.move(to: CGPoint(x: 66, y: 78))
-            p.addQuadCurve(to: CGPoint(x: 94, y: 78), control: CGPoint(x: 80, y: 100))
-
-        case .hoodies:
-            p.move(to: CGPoint(x: 50, y: 80))
-            p.addQuadCurve(to: CGPoint(x: 110, y: 80), control: CGPoint(x: 80, y: 68))
-            p.addLine(to: CGPoint(x: 120, y: 136)); p.addLine(to: CGPoint(x: 106, y: 141))
-            p.addLine(to: CGPoint(x: 103, y: 186))
-            p.addQuadCurve(to: CGPoint(x: 57, y: 186), control: CGPoint(x: 80, y: 194))
-            p.addLine(to: CGPoint(x: 54, y: 141)); p.addLine(to: CGPoint(x: 40, y: 136))
-            p.closeSubpath()
-            p.move(to: CGPoint(x: 63, y: 76))
-            p.addQuadCurve(to: CGPoint(x: 97, y: 76), control: CGPoint(x: 80, y: 93))
-
-        case .shirts:
-            p.move(to: CGPoint(x: 52, y: 82))
-            p.addQuadCurve(to: CGPoint(x: 108, y: 82), control: CGPoint(x: 80, y: 71))
-            p.addLine(to: CGPoint(x: 116, y: 124)); p.addLine(to: CGPoint(x: 104, y: 129))
-            p.addLine(to: CGPoint(x: 101, y: 176))
-            p.addQuadCurve(to: CGPoint(x: 59, y: 176), control: CGPoint(x: 80, y: 183))
-            p.addLine(to: CGPoint(x: 56, y: 129)); p.addLine(to: CGPoint(x: 44, y: 124))
-            p.closeSubpath()
+        case .socks:
+            p.addRect(CGRect(x: 62, y: 268, width: 16, height: 24))
+            p.addRect(CGRect(x: 82, y: 268, width: 16, height: 24))
 
         case .trousers:
-            p.move(to: CGPoint(x: 58, y: 186))
-            p.addLine(to: CGPoint(x: 102, y: 186))
-            p.addLine(to: CGPoint(x: 99, y: 250)); p.addLine(to: CGPoint(x: 97, y: 302))
-            p.addLine(to: CGPoint(x: 86, y: 302)); p.addLine(to: CGPoint(x: 80, y: 232))
-            p.addLine(to: CGPoint(x: 74, y: 302)); p.addLine(to: CGPoint(x: 63, y: 302))
-            p.addLine(to: CGPoint(x: 61, y: 250))
-            p.closeSubpath()
-
-        case .socks:
-            p.move(to: CGPoint(x: 62, y: 286)); p.addLine(to: CGPoint(x: 74, y: 286))
-            p.addLine(to: CGPoint(x: 73, y: 304)); p.addLine(to: CGPoint(x: 61, y: 304))
-            p.closeSubpath()
-            p.move(to: CGPoint(x: 86, y: 286)); p.addLine(to: CGPoint(x: 98, y: 286))
-            p.addLine(to: CGPoint(x: 99, y: 304)); p.addLine(to: CGPoint(x: 87, y: 304))
+            p.move(to: CGPoint(x: 58, y: 160))
+            p.addLine(to: CGPoint(x: 102, y: 160))
+            p.addLine(to: CGPoint(x: 101, y: 292))
+            p.addLine(to: CGPoint(x: 85, y: 292))
+            p.addLine(to: CGPoint(x: 80, y: 198))
+            p.addLine(to: CGPoint(x: 75, y: 292))
+            p.addLine(to: CGPoint(x: 59, y: 292))
             p.closeSubpath()
 
         case .shoes:
-            p.move(to: CGPoint(x: 58, y: 298))
-            p.addLine(to: CGPoint(x: 72, y: 298)); p.addLine(to: CGPoint(x: 74, y: 310))
-            p.addLine(to: CGPoint(x: 50, y: 310)); p.addLine(to: CGPoint(x: 52, y: 300))
+            p.move(to: CGPoint(x: 55, y: 287)); p.addLine(to: CGPoint(x: 80, y: 287))
+            p.addLine(to: CGPoint(x: 82, y: 304)); p.addLine(to: CGPoint(x: 50, y: 304))
+            p.addQuadCurve(to: CGPoint(x: 55, y: 287), control: CGPoint(x: 50, y: 292))
+            p.move(to: CGPoint(x: 80, y: 287)); p.addLine(to: CGPoint(x: 105, y: 287))
+            p.addQuadCurve(to: CGPoint(x: 110, y: 304), control: CGPoint(x: 110, y: 292))
+            p.addLine(to: CGPoint(x: 78, y: 304))
             p.closeSubpath()
-            p.move(to: CGPoint(x: 88, y: 298))
-            p.addLine(to: CGPoint(x: 102, y: 298)); p.addLine(to: CGPoint(x: 108, y: 300))
-            p.addLine(to: CGPoint(x: 110, y: 310)); p.addLine(to: CGPoint(x: 86, y: 310))
+
+        case .shirts:
+            p.move(to: CGPoint(x: 50, y: 80))
+            p.addQuadCurve(to: CGPoint(x: 110, y: 80), control: CGPoint(x: 80, y: 71))
+            p.addLine(to: CGPoint(x: 126, y: 104)); p.addLine(to: CGPoint(x: 113, y: 112))
+            p.addLine(to: CGPoint(x: 108, y: 99)); p.addLine(to: CGPoint(x: 110, y: 162))
+            p.addLine(to: CGPoint(x: 50, y: 162)); p.addLine(to: CGPoint(x: 52, y: 99))
+            p.addLine(to: CGPoint(x: 47, y: 112)); p.addLine(to: CGPoint(x: 34, y: 104))
+            p.closeSubpath()
+
+        case .hoodies:
+            p.move(to: CGPoint(x: 49, y: 78))
+            p.addQuadCurve(to: CGPoint(x: 111, y: 78), control: CGPoint(x: 80, y: 64))
+            p.addLine(to: CGPoint(x: 127, y: 126)); p.addLine(to: CGPoint(x: 128, y: 170))
+            p.addLine(to: CGPoint(x: 116, y: 170)); p.addLine(to: CGPoint(x: 112, y: 132))
+            p.addLine(to: CGPoint(x: 109, y: 106)); p.addLine(to: CGPoint(x: 111, y: 172))
+            p.addLine(to: CGPoint(x: 49, y: 172)); p.addLine(to: CGPoint(x: 51, y: 106))
+            p.addLine(to: CGPoint(x: 48, y: 132)); p.addLine(to: CGPoint(x: 44, y: 170))
+            p.addLine(to: CGPoint(x: 32, y: 170)); p.addLine(to: CGPoint(x: 33, y: 126))
+            p.closeSubpath()
+
+        case .necklaces:
+            p.move(to: CGPoint(x: 71, y: 72))
+            p.addQuadCurve(to: CGPoint(x: 89, y: 72), control: CGPoint(x: 80, y: 95))
+            p.addEllipse(in: CGRect(x: 77, y: 86, width: 6, height: 6))
+
+        case .caps:
+            p.move(to: CGPoint(x: 59, y: 34))
+            p.addQuadCurve(to: CGPoint(x: 101, y: 34), control: CGPoint(x: 80, y: 6))
+            p.closeSubpath()
+            p.move(to: CGPoint(x: 96, y: 31)); p.addLine(to: CGPoint(x: 119, y: 34))
+            p.addQuadCurve(to: CGPoint(x: 116, y: 39), control: CGPoint(x: 121, y: 39))
+            p.addLine(to: CGPoint(x: 96, y: 37))
             p.closeSubpath()
         }
-
-        return p.isEmpty ? nil : p
+        return p
     }
 }
+
 
 // MARK: - Iconos de categoría
 

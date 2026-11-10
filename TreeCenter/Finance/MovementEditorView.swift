@@ -1,6 +1,7 @@
 import SwiftData
 import SwiftUI
 import TreeCenterData
+import TreeCenterCore
 
 // Anotar un movimiento.
 //
@@ -26,6 +27,7 @@ struct MovementEditorView: View {
     @State private var concept = ""
     @State private var date = Date()
     @State private var receipt: Data?
+    @State private var split = true
 
     var body: some View {
         VStack(spacing: 0) {
@@ -38,6 +40,7 @@ struct MovementEditorView: View {
                     hint.padding(.bottom, 20)
                     walletSection
                     if kind == .transfer { destinationSection }
+                    splitCard
                     if !sections.isEmpty && kind != .transfer { sectionChips }
                     detailRow.padding(.top, 16)
                     // Solo en los gastos: a un ingreso o a un traspaso entre
@@ -278,8 +281,78 @@ struct MovementEditorView: View {
         return true
     }
 
+    // MARK: - Reparto de un ingreso
+
+    private struct SplitPart: Identifiable {
+        let wallet: Wallet
+        let cents: Int
+        var id: PersistentIdentifier { wallet.persistentModelID }
+    }
+
+    private var splitsIncome: Bool {
+        kind == .income && split && wallets.contains { $0.allocationPercent > 0 }
+    }
+
+    /// Lo que le toca a cada cartera, en céntimos exactos. Ver IncomeSplit.
+    private var splitParts: [SplitPart] {
+        guard let index = wallets.firstIndex(where: { $0.persistentModelID == walletID }) else { return [] }
+        let parts = IncomeSplit.split(cents, percents: wallets.map(\.allocationPercent), into: index)
+        return zip(wallets, parts).filter { $0.1 > 0 }.map { SplitPart(wallet: $0.0, cents: $0.1) }
+    }
+
+    @ViewBuilder
+    private var splitCard: some View {
+        if kind == .income && wallets.contains(where: { $0.allocationPercent > 0 }) {
+            VStack(alignment: .leading, spacing: 10) {
+                Toggle(isOn: $split) {
+                    Text("Repartir según los porcentajes")
+                        .font(TCFont.font(13.5))
+                        .foregroundStyle(TCColor.text)
+                }
+                .tint(TCColor.moss)
+
+                if split && cents > 0 {
+                    ForEach(splitParts) { part in
+                        HStack(spacing: 8) {
+                            Circle().fill(part.wallet.color.swiftUI).frame(width: 7, height: 7)
+                            Text(part.wallet.name).tcMicro()
+                            Spacer()
+                            Text(Cents.formatted(part.cents))
+                                .font(TCFont.font(12.5, .semibold))
+                                .monospacedDigit()
+                                .foregroundStyle(TCColor.text)
+                        }
+                    }
+                } else {
+                    Text(split ? "Teclea el importe y verás cómo se reparte." : "Entra todo en la cartera elegida.")
+                        .tcMicro()
+                }
+            }
+            .padding(14)
+            .background(TCColor.well)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .padding(.top, 12)
+        }
+    }
+
     private func save() {
         guard let wallet = selectedWallet else { return }
+
+        // Un ingreso repartido deja un movimiento en cada cartera: el saldo de
+        // cada una se calcula con sus movimientos, así que mover solo la cifra
+        // dejaría el saldo y el historial sin cuadrar.
+        if splitsIncome {
+            let text = concept.trimmingCharacters(in: .whitespacesAndNewlines)
+            for part in splitParts {
+                let movement = Movement(amountCents: part.cents, kind: .income, date: date,
+                                        concept: text, wallet: part.wallet)
+                guard movement.isValid else { continue }
+                context.insert(movement)
+            }
+            try? context.save()
+            dismiss()
+            return
+        }
 
         let movement = Movement(
             amountCents: cents,

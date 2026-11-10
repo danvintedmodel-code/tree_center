@@ -1,6 +1,7 @@
 import Charts
 import SwiftData
 import SwiftUI
+import TreeCenterCore
 import TreeCenterData
 
 // Gimnasio. La semana por delante de todo, luego lo de hoy, y la progresión
@@ -24,6 +25,7 @@ struct GymView: View {
                 VStack(spacing: 20) {
                     weekCard
                     todaySection
+                    performanceSection
                     progressSection
                     bottomButtons
                 }
@@ -58,6 +60,128 @@ struct GymView: View {
     }
 
     private var trainingDays: Int { routine?.days.filter { !$0.isRestDay }.count ?? 0 }
+
+    // MARK: - Rendimiento semanal
+
+    private var performanceSection: some View {
+        let volume = GymStats.weeklyVolume(workouts.filter(\.finished))
+        let last = volume.count >= 2 ? volume[volume.count - 2] : 0
+        let previous = volume.count >= 3 ? volume[volume.count - 3] : 0
+        let change: Int? = previous > 0 ? Int(((last - previous) / previous * 100).rounded()) : nil
+        let watch = stalled
+
+        return VStack(alignment: .leading, spacing: 10) {
+            TCSectionLabel(text: "Rendimiento semanal", trailing: "kilos movidos")
+
+            ActivityBars(values: volume.map { Int($0.rounded()) },
+                         labels: ["hace 3", "hace 2", "pasada", "esta"])
+                .frame(height: 110)
+                .tcCard(padding: 14)
+
+            Text(performanceLine(last: last, change: change, current: volume.last ?? 0))
+                .tcMicro()
+                .fixedSize(horizontal: false, vertical: true)
+
+            if !watch.isEmpty {
+                TCSectionLabel(text: "Lo que conviene tocar")
+                    .padding(.top, 8)
+
+                VStack(spacing: 0) {
+                    ForEach(Array(watch.enumerated()), id: \.element.id) { index, item in
+                        NavigationLink {
+                            ExerciseView(planned: item.planned, workout: openWorkout)
+                        } label: {
+                            stallRow(item)
+                        }
+                        .buttonStyle(.plain)
+
+                        if index < watch.count - 1 { Divider().overlay(TCColor.line) }
+                    }
+                }
+                .tcCard(padding: 14)
+            }
+        }
+    }
+
+    private func performanceLine(last: Double, change: Int?, current: Double) -> String {
+        guard last > 0 || current > 0 else {
+            return "Cuando termines entrenos, aquí verás si vas subiendo, igualando o bajando."
+        }
+        var parts: [String] = []
+        if last > 0 {
+            var sentence = "La semana pasada moviste \(Int(last).formatted()) kg"
+            if let change {
+                sentence += ", un \(abs(change)) % \(change >= 0 ? "más" : "menos") que la anterior"
+            }
+            parts.append(sentence + ".")
+        }
+        parts.append("Esta vas por \(Int(current).formatted()) kg.")
+        return parts.joined(separator: " ")
+    }
+
+    /// Un ejercicio que no sube: con su tendencia y lo que toca.
+    private struct Stall: Identifiable {
+        let id: PersistentIdentifier
+        let planned: PlannedExercise
+        let trend: Trend
+        let flatWeeks: Int
+        let advice: String
+    }
+
+    /// Los ejercicios de la rutina cuyo máximo no ha subido en las últimas
+    /// semanas, los más estancados primero. Hacen falta dos semanas con datos
+    /// para hablar de tendencia.
+    private var stalled: [Stall] {
+        guard let routine else { return [] }
+        var seen = Set<PersistentIdentifier>()
+        var result: [Stall] = []
+
+        for day in routine.orderedDays {
+            for planned in day.template?.orderedPlan ?? [] {
+                guard let exercise = planned.exercise, !seen.contains(exercise.persistentModelID) else { continue }
+                seen.insert(exercise.persistentModelID)
+
+                let tops = GymStats.weeklyTops(of: exercise)
+                guard tops.count >= 2 else { continue }
+                let trend = Trend.of(weeklyTops: tops)
+                guard trend != .up else { continue }
+
+                let advice = GymStats.adviceText(
+                    for: planned,
+                    lastReps: GymStats.lastReps(of: exercise, excluding: openWorkout)
+                ).text
+                result.append(Stall(id: exercise.persistentModelID, planned: planned, trend: trend,
+                                    flatWeeks: Trend.flatWeeks(weeklyTops: tops), advice: advice))
+            }
+        }
+        return result.sorted { $0.flatWeeks > $1.flatWeeks }
+    }
+
+    private func stallRow(_ item: Stall) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    Text(item.planned.exercise?.name ?? "Ejercicio")
+                        .font(TCFont.font(14))
+                        .foregroundStyle(TCColor.text)
+                    Text(item.trend == .down ? "↓ bajando" : "= estancado")
+                        .font(TCFont.font(11, .semibold))
+                        .foregroundStyle(item.trend == .down ? TCColor.clay : TCColor.sand)
+                }
+                Text((item.flatWeeks >= 2 ? "\(item.flatWeeks) semanas sin moverse. " : "") + item.advice)
+                    .font(TCFont.font(11.5))
+                    .foregroundStyle(TCColor.textMicro)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 6)
+            Image(systemName: "chevron.right")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(TCColor.textFaint)
+        }
+        .padding(.vertical, 11)
+        .contentShape(Rectangle())
+    }
 
     // MARK: - La semana
 
@@ -341,9 +465,9 @@ struct GymView: View {
 }
 
 extension PlannedExercise {
-    /// "4 × 8 · 60 kg", o sin el peso cuando va a peso corporal.
+    /// "4 × 6–8 · 60 kg", o sin el peso cuando va a peso corporal.
     var summary: String {
-        let base = "\(sets) × \(reps)"
+        let base = repsLow < reps ? "\(sets) × \(repsLow)–\(reps)" : "\(sets) × \(reps)"
         guard let weight else { return base + " · peso corporal" }
         return base + " · \(weight.formatted(.number.precision(.fractionLength(0...1)))) kg"
     }

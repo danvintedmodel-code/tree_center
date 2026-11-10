@@ -17,7 +17,11 @@ struct SettingsView: View {
     @Query private var movements: [Movement]
 
     @AppStorage(LockController.biometricsPreferenceKey) private var useFaceID = true
-    @AppStorage(TreeCenterSettings.cloudKey) private var useICloud = false
+    @AppStorage(InstallInfo.expiryWarnKey) private var expiryWarn = true
+    @AppStorage(InstallInfo.backupWarnKey) private var backupWarn = true
+
+    @State private var repairing = false
+    @State private var repairReport: String?
 
     @State private var confirmingReset = false
     @State private var shared: SharedFile?
@@ -32,8 +36,10 @@ struct SettingsView: View {
 
             ScrollView {
                 VStack(spacing: 20) {
+                    installBlock
                     entranceBlock
                     dataBlock
+                    appBlock
                     footer
                 }
                 .padding(.horizontal, TCSpace.gutter)
@@ -147,21 +153,6 @@ struct SettingsView: View {
             TCSectionLabel(text: "Datos", trailing: weightLine)
 
             VStack(spacing: 0) {
-                HStack(spacing: 11) {
-                    Image(systemName: "icloud")
-                        .font(.system(size: 17, weight: .light))
-                        .foregroundStyle(TCColor.textSoft)
-                        .frame(width: 22)
-                    Text("Copia en iCloud").font(TCFont.font(14)).foregroundStyle(TCColor.text)
-                    Spacer(minLength: 8)
-                    Toggle("", isOn: $useICloud)
-                        .labelsHidden()
-                        .tint(TCColor.moss)
-                }
-                .padding(.vertical, 13)
-
-                Divider().overlay(TCColor.line)
-
                 actionRow("Guardar una copia",
                           note: "un archivo con todo",
                           symbol: "arrow.down.doc") { makeBackup() }
@@ -178,6 +169,25 @@ struct SettingsView: View {
                 actionRow("Restaurar una copia",
                           note: "se aplica al reiniciar",
                           symbol: "arrow.up.doc") { importing = true }
+
+                Divider().overlay(TCColor.line)
+
+                HStack(spacing: 11) {
+                    Text("Recordarme la copia cada domingo")
+                        .font(TCFont.font(14))
+                        .foregroundStyle(TCColor.text)
+                    Spacer(minLength: 8)
+                    Toggle("", isOn: $backupWarn)
+                        .labelsHidden()
+                        .tint(TCColor.moss)
+                        .onChange(of: backupWarn) { _, on in
+                            Task {
+                                if on { _ = await ReminderScheduler.ensurePermission() }
+                                InstallInfo.scheduleBackupReminder(enabled: on)
+                            }
+                        }
+                }
+                .padding(.vertical, 13)
 
                 Divider().overlay(TCColor.line)
 
@@ -199,10 +209,146 @@ struct SettingsView: View {
 
     private var dataFootnote: String {
         """
-        La copia lleva la base y las fotos. iCloud se enciende al reiniciar la \
-        app y necesita el permiso puesto en Xcode; si no está, la app sigue \
-        guardando en el iPhone y no se pierde nada.
+        La copia lleva la base y las fotos. Instalada gratis no hay iCloud \
+        automático, así que la copia es lo que te salva si pierdes el móvil: \
+        guárdala en Archivos → iCloud Drive.
         """
+    }
+
+    // MARK: - Esta instalación
+
+    /// La cuenta atrás de los 7 días de la firma gratuita, con su aviso.
+    private var installBlock: some View {
+        let left = InstallInfo.daysLeft()
+
+        return VStack(alignment: .leading, spacing: 10) {
+            TCSectionLabel(text: "Esta instalación")
+
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(InstallInfo.describe())
+                        .font(TCFont.font(15, .semibold))
+                        .foregroundStyle((left ?? 7) <= 1 ? TCColor.clay : TCColor.text)
+                    Spacer()
+                    if let expires = InstallInfo.signature?.expires {
+                        Text(expires.formatted(.dateTime.day().month(.abbreviated).hour().minute()))
+                            .tcMicro()
+                    }
+                }
+
+                if let left {
+                    TCProgressBar(value: Double(max(0, min(7, left))) / 7,
+                                  tint: left <= 1 ? TCColor.clay : TCColor.moss)
+                }
+
+                HStack(spacing: 11) {
+                    Text("Avisarme el día antes").font(TCFont.font(14)).foregroundStyle(TCColor.text)
+                    Spacer(minLength: 8)
+                    Toggle("", isOn: $expiryWarn)
+                        .labelsHidden()
+                        .tint(TCColor.moss)
+                        .onChange(of: expiryWarn) { _, on in
+                            Task {
+                                if on { _ = await ReminderScheduler.ensurePermission() }
+                                InstallInfo.scheduleExpiryWarning(enabled: on)
+                            }
+                        }
+                }
+            }
+            .tcCard(padding: 16)
+
+            Text(left == nil
+                 ? "Esta instalación no trae fecha de caducidad: viene de Xcode o del simulador."
+                 : "Pasados los 7 días la app no abre, pero tus datos se quedan. Para renovarla: Sideloadly en el PC con el iPhone conectado.")
+                .font(TCFont.font(11))
+                .foregroundStyle(TCColor.textMicro)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    // MARK: - Aplicación
+
+    private var appBlock: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            TCSectionLabel(text: "Aplicación")
+
+            VStack(spacing: 0) {
+                HStack {
+                    Text("Versión").font(TCFont.font(14)).foregroundStyle(TCColor.text)
+                    Spacer()
+                    Text(version).tcMicro()
+                }
+                .padding(.vertical, 13)
+
+                Divider().overlay(TCColor.line)
+
+                actionRow("Reparar la app",
+                          note: repairReport ?? "si algo se ha quedado raro",
+                          symbol: "wrench.and.screwdriver",
+                          enabled: !repairing) { Task { await repair() } }
+            }
+            .tcCard(padding: 16)
+
+            Text("iOS no deja que una app se actualice sola. Cada versión nueva se instala igual que se renueva: desde el PC, encima de la que tienes, y tus datos siguen dentro.")
+                .font(TCFont.font(11))
+                .foregroundStyle(TCColor.textMicro)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var version: String {
+        let info = Bundle.main.infoDictionary
+        let short = info?["CFBundleShortVersionString"] as? String ?? "0.1"
+        let build = info?["CFBundleVersion"] as? String ?? "1"
+        return "\(short) (\(build))"
+    }
+
+    /// Lo que de verdad arregla, sin tocar ningún dato tuyo: vacía los archivos
+    /// temporales (copias y CSV ya compartidos), vuelve a programar todos los
+    /// avisos por si alguno se perdió al reinstalar, y corrige repartos de
+    /// carteras que pasen de 100 %.
+    @MainActor
+    private func repair() async {
+        repairing = true
+        defer { repairing = false }
+
+        // 1. Archivos temporales.
+        let temp = FileManager.default.temporaryDirectory
+        let leftovers = (try? FileManager.default.contentsOfDirectory(at: temp, includingPropertiesForKeys: nil)) ?? []
+        leftovers.forEach { try? FileManager.default.removeItem(at: $0) }
+
+        // 2. Avisos.
+        let permitted = await ReminderScheduler.ensurePermission()
+        let reminders = (try? context.fetch(FetchDescriptor<WorkReminder>())) ?? []
+        if permitted {
+            for reminder in reminders {
+                let title = reminder.project?.name ?? reminder.course?.name ?? "Tree Center"
+                ReminderScheduler.schedule(id: reminder.identifier, title: title, body: reminder.label,
+                                           kind: reminder.kind, hour: reminder.hour, minute: reminder.minute,
+                                           date: reminder.date)
+            }
+            InstallInfo.scheduleExpiryWarning(enabled: expiryWarn)
+            InstallInfo.scheduleBackupReminder(enabled: backupWarn)
+        }
+
+        // 3. Repartos que se pasan.
+        let wallets = (try? context.fetch(FetchDescriptor<Wallet>(sortBy: [SortDescriptor(\.order)]))) ?? []
+        var fixed = 0
+        var running = 0
+        for wallet in wallets {
+            let allowed = max(0, 100 - running)
+            if wallet.allocationPercent > allowed {
+                wallet.allocationPercent = allowed
+                fixed += 1
+            }
+            running += wallet.allocationPercent
+        }
+        try? context.save()
+
+        refreshWeight()
+        repairReport = "Hecho: \(leftovers.count) temporales fuera, \(reminders.count) avisos al día"
+            + (fixed > 0 ? ", \(fixed) repartos corregidos" : "")
+            + (permitted ? "" : " (sin permiso de avisos)")
     }
 
     private func actionRow(_ title: String, note: String, symbol: String,
@@ -293,12 +439,7 @@ struct SettingsView: View {
             Text("Tree Center 0.1")
                 .font(TCFont.font(11))
                 .foregroundStyle(TCColor.textMicro)
-            // El trazo sigue sin salir incluso con iCloud encendido: vive en el
-            // Keychain marcado como «solo este dispositivo» y no entra ni en la
-            // copia ni en el respaldo del iPhone.
-            Text(useICloud
-                 ? "El trazo y Face ID no salen de este iPhone. El resto, sí: va a tu iCloud."
-                 : "Nada de esto sale de este iPhone.")
+            Text("Nada de esto sale de este iPhone.")
                 .font(TCFont.font(11))
                 .foregroundStyle(TCColor.textFaint)
                 .multilineTextAlignment(.center)

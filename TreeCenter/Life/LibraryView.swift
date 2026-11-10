@@ -2,25 +2,30 @@ import SwiftData
 import SwiftUI
 import TreeCenterData
 
-// Biblioteca. Libros de lectura, separados de los libros de recetas: mismo
-// lenguaje visual, datos distintos.
-//
-// El ancho de cada lomo lo dan las páginas (`Book.spineWidth`). Es un detalle
-// pequeño que hace que el estante parezca un estante y no una fila de barras.
+// Biblioteca: una balda por categoría, apiladas hacia abajo según se crean.
+// Cada balda tiene a la derecha un botón que despliega sus datos. Los libros se
+// ven de frente, con su tapa, de pie sobre la balda.
 
 struct LibraryView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
 
-    @Query(sort: \Book.title) private var books: [Book]
+    @Query(sort: \Shelf.order) private var shelves: [Shelf]
+    @Query(sort: \Book.addedAt) private var books: [Book]
 
-    @State private var adding = false
-    @State private var highlighting: Book?
+    @State private var open: Set<String> = []
+    @State private var addingShelf = false
+    @State private var shelfName = ""
+    @State private var addingBook = false
+
+    private var unshelved: [Book] { books.filter { $0.shelf == nil } }
 
     var body: some View {
         VStack(spacing: 0) {
-            TCScreenHeader(title: "Biblioteca", subtitle: subtitle, back: { dismiss() }) {
-                Button { adding = true } label: {
+            TCScreenHeader(title: "Biblioteca",
+                           subtitle: books.isEmpty ? nil : "\(books.count) libros en \(shelves.count) baldas",
+                           back: { dismiss() }) {
+                Button { addingBook = true } label: {
                     Image(systemName: "plus")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(TCColor.text)
@@ -31,10 +36,44 @@ struct LibraryView: View {
             }
 
             ScrollView {
-                VStack(spacing: 20) {
-                    readingBlock
-                    shelfBlock
-                    highlightsBlock
+                VStack(spacing: 24) {
+                    if shelves.isEmpty && books.isEmpty {
+                        VStack(spacing: 8) {
+                            Text("La estantería está vacía").tcRow()
+                            Text("Crea una balda por categoría y añade libros escaneando su código de barras.")
+                                .tcMicro()
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 30)
+                        .tcCard(padding: 16, sunken: true)
+                    }
+
+                    ForEach(shelves) { shelf in
+                        ShelfRow(title: shelf.name, books: shelf.orderedBooks,
+                                 isOpen: open.contains(key(shelf)),
+                                 toggle: { toggle(key(shelf)) })
+                            .contextMenu {
+                                Button("Borrar la balda (los libros se quedan)", role: .destructive) {
+                                    context.delete(shelf)
+                                    try? context.save()
+                                }
+                            }
+                    }
+
+                    if !unshelved.isEmpty {
+                        ShelfRow(title: "Sin balda", books: unshelved,
+                                 isOpen: open.contains("sin-balda"),
+                                 toggle: { toggle("sin-balda") })
+                    }
+
+                    Button("Nueva balda") { addingShelf = true }
+                        .buttonStyle(TCGhostButtonStyle(dashed: true))
+
+                    Text("Cada balda es una categoría, y las nuevas van debajo. Al añadir un libro, su código de barras trae la tapa de verdad.")
+                        .tcMicro()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.horizontal, TCSpace.gutter)
                 .padding(.bottom, 24)
@@ -43,243 +82,247 @@ struct LibraryView: View {
         }
         .background(TCColor.bg)
         .toolbar(.hidden, for: .navigationBar)
-        .sheet(isPresented: $adding) { BookEditor() }
-        .sheet(item: $highlighting) { book in HighlightEditor(book: book) }
-    }
-
-    private var subtitle: String? {
-        books.isEmpty ? nil : "\(books.count) libros"
-    }
-
-    private var reading: Book? {
-        books.first { $0.readingNow } ?? books.first { $0.currentPage > 0 && $0.finishedAt == nil }
-    }
-
-    // MARK: - Leyendo ahora
-
-    @ViewBuilder
-    private var readingBlock: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            TCSectionLabel(text: "Leyendo ahora")
-
-            if let reading {
-                HStack(spacing: 15) {
-                    Spine(book: reading, height: 92, flat: true)
-
-                    VStack(alignment: .leading, spacing: 7) {
-                        Text(reading.title)
-                            .font(TCFont.font(15, .medium))
-                            .foregroundStyle(TCColor.text)
-                            .lineLimit(2)
-                        if !reading.author.isEmpty { Text(reading.author).tcMicro() }
-                        TCProgressBar(value: reading.progress, tint: reading.color.swiftUI)
-                        HStack {
-                            Text("página \(reading.currentPage) de \(reading.pages)")
-                                .tcMicro()
-                                .monospacedDigit()
-                            Spacer(minLength: 6)
-                            Stepper("", value: Binding(
-                                get: { reading.currentPage },
-                                set: { reading.currentPage = min(reading.pages, max(0, $0)); try? context.save() }
-                            ), in: 0...max(1, reading.pages), step: 5)
-                            .labelsHidden()
-                            .scaleEffect(0.8)
-                            .frame(width: 80, alignment: .trailing)
-                        }
-                    }
-                }
-                .tcCard(padding: 16)
-            } else {
-                Text("No hay ningún libro empezado.")
-                    .tcMicro()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .tcCard(padding: 16, sunken: true)
-            }
+        .sheet(isPresented: $addingBook) {
+            BookEditor(shelves: shelves)
+        }
+        .alert("Nueva balda", isPresented: $addingShelf) {
+            TextField("Ensayo, Novela, Negocio…", text: $shelfName)
+            Button("Cancelar", role: .cancel) { shelfName = "" }
+            Button("Crear") { createShelf() }
         }
     }
 
-    // MARK: - Estante
+    private func key(_ shelf: Shelf) -> String { String(describing: shelf.persistentModelID) }
 
-    private var shelfBlock: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            TCSectionLabel(text: "Estante", trailing: books.isEmpty ? nil : "toca para marcar lectura")
+    private func toggle(_ key: String) {
+        withAnimation(.easeOut(duration: 0.2)) {
+            if open.contains(key) { open.remove(key) } else { open.insert(key) }
+        }
+    }
 
-            VStack(spacing: 10) {
+    private func createShelf() {
+        let name = shelfName.trimmingCharacters(in: .whitespacesAndNewlines)
+        shelfName = ""
+        guard !name.isEmpty else { return }
+        context.insert(Shelf(name: name, order: (shelves.map(\.order).max() ?? -1) + 1))
+        try? context.save()
+    }
+}
+
+// MARK: - Una balda
+
+private struct ShelfRow: View {
+    let title: String
+    let books: [Book]
+    let isOpen: Bool
+    let toggle: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text(title.uppercased()).tcLabel()
+                Spacer()
+                Text("\(books.count)").tcMicro()
+                Button(action: toggle) {
+                    HStack(spacing: 5) {
+                        Text("Info")
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 9, weight: .bold))
+                            .rotationEffect(.degrees(isOpen ? 180 : 0))
+                    }
+                    .font(TCFont.font(11))
+                    .foregroundStyle(isOpen ? TCColor.moss : TCColor.textSoft)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(isOpen ? TCColor.mossWell : Color.clear)
+                    .clipShape(Capsule())
+                    .overlay(Capsule().stroke(isOpen ? TCColor.moss : TCColor.line, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(isOpen ? "Ocultar los datos de \(title)" : "Ver los datos de \(title)")
+            }
+
+            VStack(spacing: 0) {
                 ScrollView(.horizontal) {
-                    HStack(alignment: .bottom, spacing: 7) {
+                    HStack(alignment: .bottom, spacing: 10) {
+                        if books.isEmpty {
+                            Text("Balda vacía.")
+                                .tcMicro()
+                                .frame(height: 100)
+                        }
                         ForEach(books) { book in
-                            Button { startReading(book) } label: {
-                                Spine(book: book, height: 118 + CGFloat(book.pages % 5) * 3, flat: false)
+                            NavigationLink { BookDetailView(book: book) } label: {
+                                let height = 92 + min(16, CGFloat(book.pages) / 45)
+                                BookCover(book: book, width: (height * 0.66).rounded(), height: height.rounded())
+                                    .shadow(color: .black.opacity(0.35), radius: 5, y: 5)
                             }
                             .buttonStyle(.plain)
-                            .contextMenu {
-                                Button("Subrayar algo") { highlighting = book }
-                                Button("Borrar", role: .destructive) {
-                                    context.delete(book); try? context.save()
-                                }
-                            }
-                        }
-
-                        if books.isEmpty {
-                            Text("El estante está vacío.")
-                                .tcMicro()
-                                .padding(.vertical, 40)
+                            .accessibilityLabel(book.title)
                         }
                     }
-                    .padding(.horizontal, 2)
+                    .padding(.horizontal, 4)
+                    .padding(.top, 4)
                 }
                 .scrollIndicators(.hidden)
 
-                Rectangle().fill(TCColor.lineStrong).frame(height: 1)
-
-                Text("el ancho del lomo lo dan las páginas")
-                    .font(TCFont.font(10))
-                    .foregroundStyle(TCColor.textMicro)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                // La balda: una tabla con su sombra debajo.
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(TCColor.lineStrong)
+                    .frame(height: 5)
+                    .shadow(color: .black.opacity(0.4), radius: 6, y: 6)
             }
-            .tcCard(padding: 14, sunken: true)
+
+            if isOpen { info.transition(.opacity.combined(with: .move(edge: .top))) }
         }
     }
 
-    private func startReading(_ book: Book) {
-        for other in books where other.readingNow { other.readingNow = false }
-        book.readingNow = true
-        try? context.save()
-    }
+    private var info: some View {
+        let read = books.filter(\.isFinished).count
+        let pages = books.reduce(0) { $0 + $1.pages }
+        let average = books.isEmpty ? 0 : books.reduce(0.0) { $0 + $1.progress } / Double(books.count)
 
-    // MARK: - Subrayados
-
-    private var allHighlights: [Highlight] {
-        books.flatMap(\.highlights).sorted { $0.createdAt > $1.createdAt }
-    }
-
-    private var highlightsBlock: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            TCSectionLabel(text: "Subrayados")
-
-            if allHighlights.isEmpty {
-                Text("Mantén pulsado un lomo para subrayar una frase.")
-                    .tcMicro()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .tcCard(padding: 16, sunken: true)
-            } else {
-                VStack(spacing: 10) {
-                    ForEach(allHighlights.prefix(6)) { item in
-                        VStack(alignment: .leading, spacing: 11) {
-                            HStack(alignment: .top, spacing: 12) {
-                                Capsule().fill(TCColor.moss).frame(width: 3)
-                                Text("«\(item.text)»")
-                                    .font(TCFont.font(13.5))
-                                    .foregroundStyle(TCColor.text)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            HStack {
-                                Text("\(item.book?.title ?? "—") · pág. \(item.page)")
-                                    .tcMicro()
-                                Spacer(minLength: 8)
-                                Button { sendToNotes(item) } label: {
-                                    HStack(spacing: 6) {
-                                        Image(systemName: "arrow.right")
-                                            .font(.system(size: 10, weight: .semibold))
-                                        Text(item.sentToNotes ? "En Formación" : "Mandar a una nota")
-                                            .font(TCFont.font(11))
-                                    }
-                                    .foregroundStyle(item.sentToNotes ? TCColor.textMicro : TCColor.moss)
-                                }
-                                .buttonStyle(.plain)
-                                .disabled(item.sentToNotes)
-                            }
-                        }
-                        .tcCard(padding: 16)
-                    }
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                infoTile("LEÍDOS", "\(read)/\(books.count)")
+                infoTile("PÁGINAS", pages.formatted(.number.grouping(.automatic)))
+                infoTile("MEDIA", "\(Int((average * 100).rounded()))%")
+            }
+            ForEach(books) { book in
+                HStack {
+                    Text(book.title).font(TCFont.font(13)).foregroundStyle(TCColor.text).lineLimit(1)
+                    Spacer(minLength: 8)
+                    Text(book.isFinished ? "leído" : (book.currentPage > 0 ? "\(Int((book.progress * 100).rounded()))%" : "sin empezar"))
+                        .tcMicro()
                 }
             }
         }
+        .tcCard(padding: 14)
     }
 
-    /// El subrayado llega a Formación con su origen puesto. Eso es lo que hace
-    /// que una nota suelta se pueda rastrear seis meses después.
-    private func sendToNotes(_ highlight: Highlight) {
-        let topicName = "Lecturas"
-        let descriptor = FetchDescriptor<Topic>()
-        let existing = (try? context.fetch(descriptor))?.first { $0.name == topicName }
-
-        let topic: Topic
-        if let existing {
-            topic = existing
-        } else {
-            topic = Topic(name: topicName, order: 99)
-            context.insert(topic)
+    private func infoTile(_ label: String, _ value: String) -> some View {
+        VStack(spacing: 4) {
+            Text(label).font(TCFont.font(9, .semibold)).tracking(1).foregroundStyle(TCColor.textMicro)
+            Text(value).font(TCFont.font(15, .semibold)).monospacedDigit().foregroundStyle(TCColor.text)
         }
-
-        let note = StudyNote(
-            title: highlight.book?.title ?? "Subrayado",
-            body: highlight.text,
-            source: "Biblioteca · \(highlight.book?.title ?? "—") p. \(highlight.page)"
-        )
-        context.insert(note)
-        note.topic = topic
-        highlight.sentToNotes = true
-        try? context.save()
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 9)
+        .background(TCColor.well)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
-// MARK: - El lomo
+// MARK: - Un libro
 
-private struct Spine: View {
-    let book: Book
-    let height: CGFloat
-    let flat: Bool
+struct BookDetailView: View {
+    @Bindable var book: Book
 
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 3, style: .continuous)
-                .fill(TCColor.card)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 3, style: .continuous)
-                        .stroke(TCColor.line, lineWidth: 1)
-                )
-
-            HStack(spacing: 0) {
-                Rectangle().fill(book.color.swiftUI).frame(width: 3)
-                Spacer(minLength: 0)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
-
-            if flat {
-                Image(systemName: "book.closed")
-                    .font(.system(size: 20, weight: .ultraLight))
-                    .foregroundStyle(book.color.swiftUI)
-            } else {
-                Text(book.title)
-                    .font(TCFont.font(8.5))
-                    .foregroundStyle(book.readingNow ? TCColor.text : TCColor.textSoft)
-                    .lineLimit(1)
-                    .rotationEffect(.degrees(90))
-                    .fixedSize()
-                    .frame(width: width - 8, height: height - 16)
-                    .clipped()
-            }
-        }
-        .frame(width: width, height: height)
-        .overlay(
-            RoundedRectangle(cornerRadius: 3, style: .continuous)
-                .stroke(book.readingNow ? book.color.swiftUI : Color.clear, lineWidth: 1.5)
-        )
-    }
-
-    private var width: CGFloat { flat ? 58 : book.spineWidth }
-}
-
-// MARK: - Editores
-
-private struct BookEditor: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
 
+    @Query(sort: \Shelf.order) private var shelves: [Shelf]
+
+    @State private var confirmingDelete = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            TCScreenHeader(title: book.title, subtitle: book.author.isEmpty ? nil : book.author, back: { dismiss() })
+
+            ScrollView {
+                VStack(spacing: 18) {
+                    BookCover(book: book, width: 150, height: 225)
+                        .shadow(color: .black.opacity(0.45), radius: 16, y: 14)
+                        .padding(.vertical, 8)
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Text("PROGRESO").tcLabel()
+                            Spacer()
+                            Text("\(book.currentPage) / \(book.pages)").tcNumber(13)
+                        }
+                        TCProgressBar(value: book.progress)
+                        HStack(spacing: 7) {
+                            pageButton("−10", -10)
+                            pageButton("+10", 10)
+                            pageButton("+20", 20)
+                            pageButton("Terminado", book.pages)
+                        }
+                    }
+                    .tcCard(padding: 16)
+
+                    VStack(alignment: .leading, spacing: 9) {
+                        TCSectionLabel(text: "Balda")
+                        ScrollView(.horizontal) {
+                            HStack(spacing: 7) {
+                                ForEach(shelves) { shelf in
+                                    Button {
+                                        book.shelf = shelf
+                                        try? context.save()
+                                    } label: {
+                                        TCChip(text: shelf.name, selected: book.shelf?.persistentModelID == shelf.persistentModelID)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                        .scrollIndicators(.hidden)
+                    }
+
+                    VStack(alignment: .leading, spacing: 9) {
+                        TCSectionLabel(text: "Tapa", trailing: book.isbn.isEmpty ? nil : "ISBN \(book.isbn)")
+                        PhotoWell(data: $book.cover, height: 180, symbol: "book.closed",
+                                  hint: "Si no salió sola, hazle una foto", mode: .fit)
+                    }
+
+                    Button("Quitar el libro") { confirmingDelete = true }
+                        .font(TCFont.font(13))
+                        .foregroundStyle(TCColor.clay)
+                        .padding(.top, 6)
+                }
+                .padding(.horizontal, TCSpace.gutter)
+                .padding(.bottom, 24)
+            }
+            .scrollIndicators(.hidden)
+        }
+        .background(TCColor.bg)
+        .toolbar(.hidden, for: .navigationBar)
+        .alert("¿Quitar «\(book.title)»?", isPresented: $confirmingDelete) {
+            Button("Cancelar", role: .cancel) {}
+            Button("Quitar", role: .destructive) {
+                context.delete(book)
+                try? context.save()
+                dismiss()
+            }
+        }
+    }
+
+    private func pageButton(_ title: String, _ delta: Int) -> some View {
+        Button {
+            book.read(delta)
+            try? context.save()
+        } label: {
+            TCChip(text: title)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Añadir un libro
+
+struct BookEditor: View {
+    let shelves: [Shelf]
+
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var context
+
+    @State private var isbn = ""
     @State private var title = ""
     @State private var author = ""
-    @State private var pages = 200
+    @State private var pages = ""
+    @State private var cover: Data?
+    @State private var shelf: Shelf?
+    @State private var scanning = false
+    @State private var status: String?
+    @State private var searching = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -298,35 +341,83 @@ private struct BookEditor: View {
             .padding(.vertical, 16)
             .background(TCColor.cardSunken)
 
-            VStack(spacing: 14) {
-                field("Título", text: $title, placeholder: "El hombre en busca de sentido")
-                field("Autor", text: $author, placeholder: "Viktor Frankl")
-
-                VStack(alignment: .leading, spacing: 9) {
-                    TCSectionLabel(text: "Páginas", trailing: "marcan el ancho del lomo")
-                    HStack {
-                        TextField("200", value: $pages, format: .number)
-                            .keyboardType(.numberPad)
-                            .font(TCFont.font(15))
-                            .monospacedDigit()
-                            .foregroundStyle(TCColor.text)
-                        Stepper("", value: $pages, in: 1...3000, step: 20).labelsHidden()
+            ScrollView {
+                VStack(spacing: 16) {
+                    if BarcodeScanner.isAvailable {
+                        Button { scanning = true } label: {
+                            Label("Escanear el código de barras", systemImage: "barcode.viewfinder")
+                        }
+                        .buttonStyle(TCPrimaryButtonStyle())
                     }
-                    .tcCard(padding: 14, radius: TCRadius.control)
-                }
-            }
-            .padding(.horizontal, TCSpace.gutter)
-            .padding(.vertical, 18)
 
-            Spacer()
+                    VStack(alignment: .leading, spacing: 9) {
+                        TCSectionLabel(text: "ISBN", trailing: "el número del código de barras")
+                        HStack(spacing: 8) {
+                            TextField("9788499890944", text: $isbn)
+                                .keyboardType(.numbersAndPunctuation)
+                                .font(TCFont.font(15))
+                                .monospacedDigit()
+                                .foregroundStyle(TCColor.text)
+                                .tcCard(padding: 14, radius: TCRadius.control)
+                            Button(searching ? "Buscando…" : "Buscar") { lookup() }
+                                .buttonStyle(TCGhostButtonStyle())
+                                .frame(width: 110)
+                                .disabled(searching || BookLookup.clean(isbn).count < 10)
+                        }
+                        if let status {
+                            Text(status).tcMicro().fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+
+                    field("Título", text: $title, placeholder: "Meditaciones")
+                    field("Autor", text: $author, placeholder: "Marco Aurelio")
+                    field("Páginas", text: $pages, placeholder: "180", numeric: true)
+
+                    VStack(alignment: .leading, spacing: 9) {
+                        TCSectionLabel(text: "Balda")
+                        ScrollView(.horizontal) {
+                            HStack(spacing: 7) {
+                                Button { shelf = nil } label: { TCChip(text: "Sin balda", selected: shelf == nil) }
+                                    .buttonStyle(.plain)
+                                ForEach(shelves) { option in
+                                    Button { shelf = option } label: {
+                                        TCChip(text: option.name, selected: shelf?.persistentModelID == option.persistentModelID)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                        .scrollIndicators(.hidden)
+                    }
+
+                    VStack(alignment: .leading, spacing: 9) {
+                        TCSectionLabel(text: "Tapa")
+                        PhotoWell(data: $cover, height: 200, symbol: "book.closed",
+                                  hint: "Sale sola al escanear, o hazle una foto", mode: .fit)
+                    }
+                }
+                .padding(.horizontal, TCSpace.gutter)
+                .padding(.vertical, 18)
+            }
+            .scrollIndicators(.hidden)
+            .scrollDismissesKeyboard(.interactively)
         }
         .background(TCColor.bg)
+        .onAppear { if shelf == nil { shelf = shelves.first } }
+        .fullScreenCover(isPresented: $scanning) {
+            BarcodeScanner { code in
+                isbn = code
+                lookup()
+            }
+            .ignoresSafeArea()
+        }
     }
 
-    private func field(_ label: String, text: Binding<String>, placeholder: String) -> some View {
+    private func field(_ label: String, text: Binding<String>, placeholder: String, numeric: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 9) {
             TCSectionLabel(text: label)
             TextField(placeholder, text: text)
+                .keyboardType(numeric ? .numberPad : .default)
                 .font(TCFont.font(15))
                 .foregroundStyle(TCColor.text)
                 .tcCard(padding: 14, radius: TCRadius.control)
@@ -335,80 +426,46 @@ private struct BookEditor: View {
 
     private var canSave: Bool { !title.trimmingCharacters(in: .whitespaces).isEmpty }
 
-    private func save() {
-        let palette = PaletteColor.allCases
-        context.insert(Book(title: title.trimmingCharacters(in: .whitespaces),
-                            author: author.trimmingCharacters(in: .whitespaces),
-                            pages: max(1, pages),
-                            color: palette[abs(title.hashValue) % palette.count]))
-        try? context.save()
-        dismiss()
-    }
-}
+    private func lookup() {
+        let code = BookLookup.clean(isbn)
+        guard code.count >= 10 else { return }
+        searching = true
+        status = nil
 
-private struct HighlightEditor: View {
-    let book: Book
+        Task { @MainActor in
+            let found = await BookLookup.find(isbn: code)
+            searching = false
 
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var context
-
-    @State private var text = ""
-    @State private var page = 1
-
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Button("Cancelar") { dismiss() }
-                    .font(TCFont.font(14)).foregroundStyle(TCColor.textSoft)
-                Spacer()
-                Text("Subrayar").font(TCFont.font(14, .semibold)).foregroundStyle(TCColor.text)
-                Spacer()
-                Button("Guardar") { save() }
-                    .font(TCFont.font(14, .semibold))
-                    .foregroundStyle(canSave ? TCColor.moss : TCColor.textFaint)
-                    .disabled(!canSave)
+            guard let found else {
+                status = "No está en Open Library, o no hay conexión. Rellénalo a mano y hazle una foto a la tapa."
+                return
             }
-            .padding(.horizontal, TCSpace.gutter)
-            .padding(.vertical, 16)
-            .background(TCColor.cardSunken)
-
-            VStack(spacing: 14) {
-                VStack(alignment: .leading, spacing: 9) {
-                    TCSectionLabel(text: "Frase", trailing: book.title)
-                    TextField("Lo que te hizo parar", text: $text, axis: .vertical)
-                        .font(TCFont.font(14))
-                        .foregroundStyle(TCColor.text)
-                        .lineLimit(3...8)
-                        .tcCard(padding: 14, radius: TCRadius.control)
-                }
-
-                VStack(alignment: .leading, spacing: 9) {
-                    TCSectionLabel(text: "Página")
-                    HStack {
-                        TextField("1", value: $page, format: .number)
-                            .keyboardType(.numberPad)
-                            .font(TCFont.font(15))
-                            .monospacedDigit()
-                            .foregroundStyle(TCColor.text)
-                        Stepper("", value: $page, in: 1...max(1, book.pages)).labelsHidden()
-                    }
-                    .tcCard(padding: 14, radius: TCRadius.control)
-                }
-            }
-            .padding(.horizontal, TCSpace.gutter)
-            .padding(.vertical, 18)
-
-            Spacer()
+            // Solo se rellena lo que esté vacío: si ya escribiste algo, manda lo tuyo.
+            if title.isEmpty { title = found.title }
+            if author.isEmpty { author = found.author }
+            if pages.isEmpty, let count = found.pages { pages = String(count) }
+            if cover == nil { cover = found.cover }
+            status = found.cover == nil ? "Encontrado, pero sin tapa: puedes hacerle una foto." : "Encontrado, con su tapa."
         }
-        .background(TCColor.bg)
     }
 
-    private var canSave: Bool { !text.trimmingCharacters(in: .whitespaces).isEmpty }
-
     private func save() {
-        let highlight = Highlight(text: text.trimmingCharacters(in: .whitespaces), page: page)
-        context.insert(highlight)
-        highlight.book = book
+        let name = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return }
+
+        // El color de la tapa dibujada sale del título, siempre el mismo para el
+        // mismo libro. No `hashValue`: cambia en cada arranque, y su `abs` puede
+        // desbordarse con el número más negativo.
+        let palette = PaletteColor.allCases
+        let seed = name.unicodeScalars.reduce(0) { ($0 + Int($1.value)) % 1_000_003 }
+        let book = Book(title: name,
+                        author: author.trimmingCharacters(in: .whitespacesAndNewlines),
+                        pages: max(1, Int(pages) ?? 200),
+                        color: palette[seed % palette.count],
+                        isbn: BookLookup.clean(isbn))
+        book.cover = cover
+        context.insert(book)
+        book.shelf = shelf
         try? context.save()
         dismiss()
     }
