@@ -113,6 +113,20 @@ public enum DateKind: String, Codable, CaseIterable, Identifiable, Sendable {
     }
 }
 
+/// Un aviso cada día a una hora, o uno solo en una fecha y hora.
+public enum ReminderKind: String, Codable, CaseIterable, Identifiable, Sendable {
+    case daily, once
+
+    public var id: String { rawValue }
+
+    public var label: String {
+        switch self {
+        case .daily: return "Cada día"
+        case .once: return "Un día concreto"
+        }
+    }
+}
+
 public enum ProjectStatus: String, Codable, CaseIterable, Identifiable, Sendable {
     case idea, running, paused, closed
 
@@ -220,7 +234,7 @@ public enum HomeSectionID: String, Codable, CaseIterable, Identifiable, Sendable
         case .gym: return "Gimnasio"
         case .food: return "Alimentación"
         case .wardrobe: return "Armario"
-        case .wishes: return "Caprichos"
+        case .wishes: return "Caprichos sanos"
         case .calendar: return "Calendario"
         case .projects: return "Emprendimientos"
         case .learning: return "Formación"

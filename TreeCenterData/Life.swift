@@ -38,60 +38,34 @@ public final class ImportantDate {
 
 // MARK: - Emprendimientos
 
+/// Un proyecto. Sus tareas, notas, ideas y avisos viven en el espacio de
+/// trabajo compartido con los cursos (Work.swift).
 @Model
 public final class Project {
     public var name: String = ""
     public var statusRaw: String = ProjectStatus.idea.rawValue
-    public var progress: Double = 0
-    public var nextStep: String = ""
-    public var nextStepDate: Date?
     public var startedAt: Date = Date()
 
-    @Relationship(deleteRule: .cascade, inverse: \ProjectTask.project)
-    public var tasks: [ProjectTask] = []
+    @Relationship(deleteRule: .cascade, inverse: \WorkTask.project)
+    public var tasks: [WorkTask] = []
 
-    @Relationship(deleteRule: .cascade, inverse: \DecisionNote.project)
-    public var decisions: [DecisionNote] = []
+    @Relationship(deleteRule: .cascade, inverse: \WorkNote.project)
+    public var notes: [WorkNote] = []
 
-    public init(name: String = "", status: ProjectStatus = .idea,
-                progress: Double = 0, nextStep: String = "") {
+    @Relationship(deleteRule: .cascade, inverse: \WorkIdea.project)
+    public var ideas: [WorkIdea] = []
+
+    @Relationship(deleteRule: .cascade, inverse: \WorkReminder.project)
+    public var reminders: [WorkReminder] = []
+
+    public init(name: String = "", status: ProjectStatus = .idea) {
         self.name = name
         self.statusRaw = status.rawValue
-        self.progress = progress
-        self.nextStep = nextStep
         self.startedAt = Date()
     }
 
     public var status: ProjectStatus { ProjectStatus(rawValue: statusRaw) ?? .idea }
     public var openTasks: Int { tasks.filter { !$0.done }.count }
-}
-
-@Model
-public final class ProjectTask {
-    public var title: String = ""
-    public var done: Bool = false
-    public var order: Int = 0
-    public var project: Project?
-
-    public init(title: String = "", done: Bool = false, order: Int = 0) {
-        self.title = title
-        self.done = done
-        self.order = order
-    }
-}
-
-/// El diario de decisiones: por qué se decidió lo que se decidió, con fecha.
-/// Es lo que te salva dentro de seis meses.
-@Model
-public final class DecisionNote {
-    public var date: Date = Date()
-    public var text: String = ""
-    public var project: Project?
-
-    public init(date: Date = Date(), text: String = "") {
-        self.date = date
-        self.text = text
-    }
 }
 
 // MARK: - Formación
@@ -101,8 +75,23 @@ public final class Course {
     public var name: String = ""
     public var totalLessons: Int = 1
     public var currentLesson: Int = 0
-    public var lastTouched: Date?
     public var finishedAt: Date?
+
+    /// La fecha de cada lección hecha. Sin ella las estadísticas de un curso
+    /// solo sabrían cuántas llevas, no cuándo las hiciste.
+    public var lessonLog: [Date] = []
+
+    @Relationship(deleteRule: .cascade, inverse: \WorkTask.course)
+    public var tasks: [WorkTask] = []
+
+    @Relationship(deleteRule: .cascade, inverse: \WorkNote.course)
+    public var notes: [WorkNote] = []
+
+    @Relationship(deleteRule: .cascade, inverse: \WorkIdea.course)
+    public var ideas: [WorkIdea] = []
+
+    @Relationship(deleteRule: .cascade, inverse: \WorkReminder.course)
+    public var reminders: [WorkReminder] = []
 
     public init(name: String = "", totalLessons: Int = 1, currentLesson: Int = 0) {
         self.name = name
@@ -117,43 +106,35 @@ public final class Course {
 
     /// Un curso terminado no desaparece: se queda al 100 % como registro.
     public var isFinished: Bool { finishedAt != nil || currentLesson >= totalLessons }
+
+    /// Una lección más, con su fecha. Al llegar a la última, el curso se cierra.
+    public func completeLesson(now: Date = Date()) {
+        guard currentLesson < totalLessons else { return }
+        currentLesson += 1
+        lessonLog.append(now)
+        if currentLesson >= totalLessons { finishedAt = now }
+    }
 }
 
+// MARK: - Biblioteca
+
+/// Una balda: una categoría de la estantería. Las nuevas van debajo.
 @Model
-public final class Topic {
+public final class Shelf {
     public var name: String = ""
     public var order: Int = 0
 
-    @Relationship(deleteRule: .cascade, inverse: \StudyNote.topic)
-    public var notes: [StudyNote] = []
+    /// Nullify: borrar una balda no borra sus libros, los deja sin balda.
+    @Relationship(deleteRule: .nullify, inverse: \Book.shelf)
+    public var books: [Book] = []
 
     public init(name: String = "", order: Int = 0) {
         self.name = name
         self.order = order
     }
+
+    public var orderedBooks: [Book] { books.sorted { $0.addedAt < $1.addedAt } }
 }
-
-@Model
-public final class StudyNote {
-    public var title: String = ""
-    public var body: String = ""
-    public var tags: [String] = []
-    /// De dónde salió. Es lo que permite que un subrayado de Biblioteca llegue
-    /// aquí con su origen puesto en vez de aparecer huérfano.
-    public var source: String = ""
-    public var createdAt: Date = Date()
-    public var topic: Topic?
-
-    public init(title: String = "", body: String = "", tags: [String] = [], source: String = "") {
-        self.title = title
-        self.body = body
-        self.tags = tags
-        self.source = source
-        self.createdAt = Date()
-    }
-}
-
-// MARK: - Biblioteca
 
 @Model
 public final class Book {
@@ -161,22 +142,30 @@ public final class Book {
     public var author: String = ""
     public var pages: Int = 1
     public var currentPage: Int = 0
-    public var shelf: String = ""
     public var colorRaw: String = PaletteColor.neutral.rawValue
     public var readingNow: Bool = false
     public var finishedAt: Date?
+    public var addedAt: Date = Date()
+    /// El código de barras del libro. Con él se busca la tapa de verdad.
+    public var isbn: String = ""
+
+    /// La tapa: la del escaneo, o una foto. Sin ella se dibuja una con el color.
+    @Attribute(.externalStorage) public var cover: Data?
+
+    public var shelf: Shelf?
 
     @Relationship(deleteRule: .cascade, inverse: \Highlight.book)
     public var highlights: [Highlight] = []
 
     public init(title: String = "", author: String = "", pages: Int = 1,
-                currentPage: Int = 0, shelf: String = "", color: PaletteColor = .neutral) {
+                currentPage: Int = 0, color: PaletteColor = .neutral, isbn: String = "") {
         self.title = title
         self.author = author
         self.pages = pages
         self.currentPage = currentPage
-        self.shelf = shelf
         self.colorRaw = color.rawValue
+        self.isbn = isbn
+        self.addedAt = Date()
     }
 
     public var color: PaletteColor { PaletteColor(rawValue: colorRaw) ?? .neutral }
@@ -186,10 +175,19 @@ public final class Book {
         return min(1, Double(currentPage) / Double(pages))
     }
 
+    public var isFinished: Bool { currentPage >= pages }
+
+    /// Avanza páginas sin pasarse, y cierra el libro al llegar al final.
+    public func read(_ delta: Int, now: Date = Date()) {
+        currentPage = min(pages, max(0, currentPage + delta))
+        if currentPage >= pages && finishedAt == nil { finishedAt = now }
+    }
+
     /// El ancho del lomo lo dan las páginas. Es el detalle que hace que el
     /// estante parezca un estante.
     public var spineWidth: Double { min(44, max(20, Double(pages) / 16)) }
 }
+
 
 @Model
 public final class Highlight {

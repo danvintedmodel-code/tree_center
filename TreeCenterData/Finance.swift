@@ -25,6 +25,9 @@ public final class Wallet {
     public var monthlyCapCents: Int?
     public var order: Int = 0
     public var showsAsRing: Bool = true
+    /// Qué parte de cada ingreso le toca, de 0 a 100. Entre todas las carteras
+    /// no pasan de 100; lo que falte se queda en la cartera donde entra.
+    public var allocationPercent: Int = 0
     public var createdAt: Date = Date()
 
     @Relationship(deleteRule: .cascade, inverse: \WalletSection.wallet)

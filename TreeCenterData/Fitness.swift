@@ -11,6 +11,8 @@ public final class Exercise {
     public var animationName: String?
     /// Tres puntos de técnica, no un tratado.
     public var technique: [String] = []
+    /// Los apuntes del ejercicio: cómo fue, qué notaste, qué cambiar.
+    public var notes: String = ""
     public var createdAt: Date = Date()
 
     /// Nullify y no cascade: borrar un ejercicio del catálogo no puede llevarse
@@ -43,21 +45,29 @@ public final class WorkoutTemplate {
     public var orderedPlan: [PlannedExercise] { plan.sorted { $0.order < $1.order } }
 }
 
+/// Un ejercicio dentro de una sesión: series, un rango de repeticiones y el
+/// peso de trabajo. El rango es lo que hace funcionar la doble progresión:
+/// se suben reps dentro de él, y solo al cerrarlo arriba se sube el peso.
 @Model
 public final class PlannedExercise {
     public var order: Int = 0
     public var sets: Int = 3
+    /// El techo del rango. Se llama `reps` porque antes era un número solo.
     public var reps: Int = 10
+    /// El suelo del rango.
+    public var repsLow: Int = 8
     public var weight: Double?
 
     public var exercise: Exercise?
     public var template: WorkoutTemplate?
 
-    public init(exercise: Exercise? = nil, order: Int = 0, sets: Int = 3, reps: Int = 10, weight: Double? = nil) {
+    public init(exercise: Exercise? = nil, order: Int = 0, sets: Int = 3, reps: Int = 10,
+                repsLow: Int? = nil, weight: Double? = nil) {
         self.exercise = exercise
         self.order = order
         self.sets = sets
         self.reps = reps
+        self.repsLow = repsLow ?? max(1, reps - 2)
         self.weight = weight
     }
 }

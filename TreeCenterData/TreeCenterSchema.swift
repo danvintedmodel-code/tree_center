@@ -21,8 +21,9 @@ public enum TreeCenterSchema {
         // Finanzas
         Wallet.self, WalletSection.self, Movement.self, FinanceSettings.self,
         // Resto
-        ImportantDate.self, Project.self, ProjectTask.self, DecisionNote.self,
-        Course.self, Topic.self, StudyNote.self,
+        ImportantDate.self, Project.self, Course.self,
+        WorkTask.self, WorkNote.self, WorkIdea.self, WorkReminder.self,
+        Shelf.self,
         Book.self, Highlight.self,
         WishBlock.self, WishItem.self, Place.self,
         HomeWidget.self
@@ -94,8 +95,9 @@ public enum TreeCenterSchema {
     ]
 
     public static let lifeModels: [any PersistentModel.Type] = [
-        ImportantDate.self, Project.self, ProjectTask.self, DecisionNote.self,
-        Course.self, Topic.self, StudyNote.self,
+        ImportantDate.self, Project.self, Course.self,
+        WorkTask.self, WorkNote.self, WorkIdea.self, WorkReminder.self,
+        Shelf.self,
         Book.self, Highlight.self,
         WishBlock.self, WishItem.self, Place.self,
         HomeWidget.self

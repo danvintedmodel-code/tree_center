@@ -98,6 +98,69 @@ final class GroupSchemaTests: XCTestCase {
         print("[grupo] vida: ok")
     }
 
+    /// El espacio de trabajo: cada tarea, nota, idea y aviso tiene dos dueños
+    /// posibles, un proyecto o un curso. Dos relaciones a-uno opcionales hacia
+    /// tipos distintos, cada una con su inversa: justo el tipo de cosa que tumba
+    /// SwiftData al guardar si una inversa está mal declarada.
+    @MainActor
+    func testEspacioDeTrabajoConDosDuenos() throws {
+        let context = try context(TreeCenterSchema.lifeModels, "trabajo")
+
+        let project = Project(name: "Tree Center")
+        let course = Course(name: "SwiftUI a fondo", totalLessons: 22)
+        context.insert(project)
+        context.insert(course)
+
+        let projectTask = WorkTask(title: "Arrancarla en el iPhone")
+        let courseTask = WorkTask(title: "Módulo 4")
+        let note = WorkNote(text: "# Plan\n[ ] Probar el .ipa")
+        let idea = WorkIdea(text: "Modo foco")
+        let reminder = WorkReminder(kind: .once, hour: 19, minute: 0, date: Date(), label: "Entregar")
+        [projectTask, courseTask, note, idea, reminder].forEach { context.insert($0) }
+
+        project.adopt(projectTask)
+        project.adopt(note)
+        project.adopt(idea)
+        course.adopt(courseTask)
+        course.adopt(reminder)
+
+        print("[grupo] trabajo: guardando")
+        XCTAssertNoThrow(try context.save())
+        print("[grupo] trabajo: ok")
+
+        // Cada pieza cae en su dueño y solo en el suyo.
+        XCTAssertEqual(project.tasks.count, 1)
+        XCTAssertEqual(course.tasks.count, 1)
+        XCTAssertEqual(project.notes.count, 1)
+        XCTAssertEqual(course.reminders.count, 1)
+        XCTAssertTrue(course.notes.isEmpty)
+
+        // Y borrar el proyecto se lleva sus cosas, no las del curso.
+        context.delete(project)
+        XCTAssertNoThrow(try context.save())
+        XCTAssertEqual(try context.fetch(FetchDescriptor<WorkTask>()).count, 1)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<WorkNote>()).count, 0)
+    }
+
+    /// Una balda que se borra deja sus libros sin balda, no los borra.
+    @MainActor
+    func testBorrarUnaBaldaNoBorraLosLibros() throws {
+        let context = try context(TreeCenterSchema.lifeModels, "baldas")
+
+        let shelf = Shelf(name: "Ensayo")
+        let book = Book(title: "Meditaciones", pages: 180)
+        context.insert(shelf)
+        context.insert(book)
+        book.shelf = shelf
+        XCTAssertNoThrow(try context.save())
+        XCTAssertEqual(shelf.books.count, 1)
+
+        context.delete(shelf)
+        XCTAssertNoThrow(try context.save())
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Book>()).count, 1)
+        XCTAssertNil(book.shelf)
+    }
+
     @MainActor
     func testEsquemaCompleto() throws {
         let context = try context(TreeCenterSchema.models, "completo")
