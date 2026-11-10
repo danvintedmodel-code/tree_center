@@ -6,7 +6,7 @@ import UIKit
 // foto; si no, una tapa dibujada con su color, el título y el autor, para que
 // la estantería nunca tenga huecos grises.
 
-struct BookCover: View {
+struct LibraryCover: View {
     let book: Book
     var width: CGFloat
     var height: CGFloat

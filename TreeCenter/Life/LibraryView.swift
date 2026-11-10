@@ -153,7 +153,7 @@ private struct ShelfRow: View {
                         ForEach(books) { book in
                             NavigationLink { BookDetailView(book: book) } label: {
                                 let height = 92 + min(16, CGFloat(book.pages) / 45)
-                                BookCover(book: book, width: (height * 0.66).rounded(), height: height.rounded())
+                                LibraryCover(book: book, width: (height * 0.66).rounded(), height: height.rounded())
                                     .shadow(color: .black.opacity(0.35), radius: 5, y: 5)
                             }
                             .buttonStyle(.plain)
@@ -229,7 +229,7 @@ struct BookDetailView: View {
 
             ScrollView {
                 VStack(spacing: 18) {
-                    BookCover(book: book, width: 150, height: 225)
+                    LibraryCover(book: book, width: 150, height: 225)
                         .shadow(color: .black.opacity(0.45), radius: 16, y: 14)
                         .padding(.vertical, 8)
 
